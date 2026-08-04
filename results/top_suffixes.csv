@@ -1,0 +1,49 @@
+player_role,suffix_name,suffix_desc,all_player_prob,all_player_bonus,top_player_prob,top_player_bonus
+Core,of the Octopus,+7% in games where the player ends the game with 4 or more items that have an active ability,0.7969535438109221,5.578674806676455,0.67504645634404,4.72532519440828
+Core,the Underdog,+6% in games where the player loses,0.4191897873503371,2.515138724102022,0.37887032730968373,2.273221963858102
+Core,the Flayed Twins Acolyte,+7% if any player gets first blood before the starting horn,0.09417782531431244,0.6592447772001871,0.11786958046379815,0.8250870632465871
+Core,the Divine Thief,+9% in games where any player steals a Divine Rapier,0.07104482618376809,0.6394034356539128,0.08807599011128564,0.7926839110015708
+Core,the Decisive,+25% in games that last less than 25 minutes,0.03076588070670599,0.7691470176676498,0.02671430692522215,0.6678576731305538
+Core,of the Mule,+21% in games where the player ends the game with items in every slot of their inventory and backpack,0.020297682361012648,0.4262513295812656,0.02541007247351287,0.5336115219437703
+Core,the Loquacious,+7% in games where the player uses the most voice lines,0.03943237177923106,0.2760266024546174,0.06913026458080157,0.483911852065611
+Core,the Tormented,+9% if any player dies to a Tormentor,0.02461832230985543,0.2215649007886989,0.035059265882277084,0.31553339294049376
+Core,of the Raven,+6% if any player gets a rampage,0.027194601068505683,0.1631676064110341,0.030062162549238568,0.1803729752954314
+Core,the Even-Keeled,+25% in games where the player is tipped 5 or more times,0.006712972853825332,0.1678243213456333,0.005947751723275649,0.14869379308189123
+Core,the Nothl Pilgrim,+7% if the player has the most deaths in the game,0.0349781999979364,0.24484739998555483,0.01466176569864245,0.10263235989049715
+Core,the Pacifist,+8% if the player ends the game with no kills,0.028844941782933693,0.23075953426346954,0.012463059405091464,0.09970447524073171
+Core,the Patient,+13% if first blood does not happen until after 10 minutes,0.0015860583483855134,0.020618758529011672,0.0031721166967710267,0.041237517058023344
+Core,of the Bull,+9% in games where the player buys back before 30 minutes,0.011770452054895438,0.10593406849405894,0.0040078978030560165,0.036071080227504146
+Core,the Accomplice,+7% in games where the player has the most assists,0.062827541053942,0.43979278737759403,0.0015522515309833232,0.010865760716883263
+Core,of the Ant,+8% in games where the player has the lowest networth,0,0,0,0
+Mid,of the Octopus,+7% in games where the player ends the game with 4 or more items that have an active ability,0.7611032025747044,5.3277224180229314,0.7904333412696728,5.533033388887709
+Mid,the Underdog,+6% in games where the player loses,0.4189571599813058,2.5137429598878347,0.40810225753888635,2.448613545233318
+Mid,of the Mule,+21% in games where the player ends the game with items in every slot of their inventory and backpack,0.034211007279440056,0.7184311528682412,0.053414010581820784,1.1216942222182364
+Mid,the Loquacious,+7% in games where the player uses the most voice lines,0.15540116789340724,1.0878081752538507,0.13139199037307853,0.9197439326115497
+Mid,the Decisive,+25% in games that last less than 25 minutes,0.030752732110799666,0.7688183027699916,0.03209624647656309,0.8024061619140772
+Mid,the Accomplice,+7% in games where the player has the most assists,0.04420279407896965,0.3094195585527875,0.08089710089225866,0.5662797062458106
+Mid,the Flayed Twins Acolyte,+7% if any player gets first blood before the starting horn,0.09448154841038223,0.6613708388726756,0.07521416405457786,0.526499148382045
+Mid,the Divine Thief,+9% in games where any player steals a Divine Rapier,0.07135811165757364,0.6422230049181628,0.04486495173915099,0.40378456565235893
+Mid,the Tormented,+9% if any player dies to a Tormentor,0.02461832230985543,0.2215649007886989,0.02906725265659831,0.26160527390938476
+Mid,of the Raven,+6% if any player gets a rampage,0.027146380335450068,0.1628782820127004,0.03200966527454425,0.1920579916472655
+Mid,the Nothl Pilgrim,+7% if the player has the most deaths in the game,0.030975822131872496,0.21683075492310747,0.02366986701508618,0.16568906910560327
+Mid,of the Bull,+9% in games where the player buys back before 30 minutes,0.018268336562373665,0.164415029061363,0.010342143364977347,0.09307929028479613
+Mid,the Pacifist,+8% if the player ends the game with no kills,0.013605500044912129,0.10884400035929703,0.007013734584292356,0.056109876674338845
+Mid,of the Ant,+8% in games where the player has the lowest networth,0,0,0,0
+Mid,the Even-Keeled,+25% in games where the player is tipped 5 or more times,0.01442460040717445,0.36061501017936126,0,0
+Mid,the Patient,+13% if first blood does not happen until after 10 minutes,0.0015860583483855134,0.020618758529011672,0,0
+Support,of the Octopus,+7% in games where the player ends the game with 4 or more items that have an active ability,0.6883054821657348,4.818138375160144,0.6625514459460885,4.637860121622619
+Support,the Underdog,+6% in games where the player loses,0.41284520758161986,2.4770712454897192,0.41979370959946183,2.518762257596771
+Support,of the Ant,+8% in games where the player has the lowest networth,0.20706757302235781,1.6565405841788625,0.22807278361423877,1.8245822689139102
+Support,the Accomplice,+7% in games where the player has the most assists,0.2635147677522067,1.844603374265447,0.2543578773612423,1.7805051415286963
+Support,the Nothl Pilgrim,+7% if the player has the most deaths in the game,0.21491918727471881,1.5044343109230316,0.23184964211776116,1.622947494824328
+Support,the Pacifist,+8% if the player ends the game with no kills,0.13419437182123145,1.0735549745698516,0.12818756459669114,1.0255005167735292
+Support,the Decisive,+25% in games that last less than 25 minutes,0.029555131057269767,0.7388782764317442,0.038497572236479954,0.9624393059119989
+Support,of the Mule,+21% in games where the player ends the game with items in every slot of their inventory and backpack,0.03374665224214762,0.7086796970851001,0.034721574723834116,0.7291530692005165
+Support,the Flayed Twins Acolyte,+7% if any player gets first blood before the starting horn,0.09362688759900878,0.6553882131930615,0.10192328678617786,0.713463007503245
+Support,the Divine Thief,+9% in games where any player steals a Divine Rapier,0.07046061749571449,0.6341455574614304,0.0690476194667822,0.6214285752010398
+Support,of the Bull,+9% in games where the player buys back before 30 minutes,0.05531109060368504,0.49779981543316537,0.05461413501065864,0.4915272150959278
+Support,the Tormented,+9% if any player dies to a Tormentor,0.026394590731483192,0.23755131658334874,0.03712532888922717,0.3341279600030445
+Support,the Loquacious,+7% in games where the player uses the most voice lines,0.10324152690998017,0.7226906883698612,0.04187382495550855,0.29311677468855984
+Support,of the Raven,+6% if any player gets a rampage,0.026498440752009533,0.1589906445120572,0.037481929928676876,0.22489157957206124
+Support,the Patient,+13% if first blood does not happen until after 10 minutes,0.0015860583483855134,0.020618758529011672,0.0031721166967710267,0.041237517058023344
+Support,the Even-Keeled,+25% in games where the player is tipped 5 or more times,0.0024376293559175504,0.06094073389793876,0,0
