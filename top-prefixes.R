@@ -1,3 +1,4 @@
+source("config.R")
 source("src/get-player-data.R")
 source("src/get-team-data.R")
 source("src/get-match-data.R")
@@ -9,12 +10,11 @@ library(progress)
 library(googlesheets4)
 
 # Get data
-league_id <- 18324
 teams_elim <- scan("data/teams_elim.csv", quiet = TRUE)
 players <- get_player_data(league_id) %>% filter(!(team_id %in% teams_elim))
 teams <- get_team_data(league_id)
 top_players <- scan("data/top_players.csv", quiet = TRUE)
-heroes <- get_hero_data("C:/Users/Viren/.conda/envs/dota-compendium/python.exe")
+heroes <- get_hero_data(python_exe)
 prefixes <- read_csv("data/prefixes.csv", show_col_types = FALSE)
 
 match_ids <- get_match_ids(league_id)
@@ -180,7 +180,7 @@ prefix_sums %>%
     "Role" = "player_role"
   ) %>%
   write_sheet(
-    ss = "1U5X3r00hNPcafQpNTbWQwLi2Vja3JpAi42pDTBGmHHs", 
+    ss = spreadsheet_id, 
     sheet = "Title Prefix Data"
   )
 

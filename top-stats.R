@@ -1,3 +1,4 @@
+source("config.R")
 source("src/get-player-data.R")
 source("src/get-team-data.R")
 source("src/get-match-data.R")
@@ -8,7 +9,6 @@ library(progress)
 library(googlesheets4)
 
 # Get data
-league_id <- 18324
 teams_elim <- scan("data/teams_elim.csv", quiet = TRUE)
 players <- get_player_data(league_id) %>% filter(!(team_id %in% teams_elim))
 teams <- get_team_data(league_id)
@@ -103,7 +103,7 @@ fantasy_sums %>%
     "Role" = "player_role"
   ) %>%
   write_sheet(
-    ss = "1U5X3r00hNPcafQpNTbWQwLi2Vja3JpAi42pDTBGmHHs", 
+    ss = spreadsheet_id, 
     sheet = "Emblem Stat Data (Avg)"
   )
 
@@ -123,7 +123,7 @@ fantasy_sums %>%
     "Role" = "player_role"
   ) %>%
   write_sheet(
-    ss = "1U5X3r00hNPcafQpNTbWQwLi2Vja3JpAi42pDTBGmHHs", 
+    ss = spreadsheet_id, 
     sheet = "Emblem Stat Data (Std)"
   )
 

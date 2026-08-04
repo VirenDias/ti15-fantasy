@@ -1,3 +1,4 @@
+source("config.R")
 source("src/get-player-data.R")
 source("src/gql-query.R")
 
@@ -8,7 +9,7 @@ library(jsonlite)
 get_match_ids <- function(
     player_ids,
     start_time = as.integer(Sys.time()),
-    patch = "7.38,7.39",
+    patch = patch_numbers,
     max_matches = 50
 ) {
   message("Retrieving match IDs")

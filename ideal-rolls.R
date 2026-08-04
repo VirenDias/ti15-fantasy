@@ -1,10 +1,10 @@
+source("config.R")
 source("src/get-player-data.R")
 source("src/get-team-data.R")
 
 library(tidyverse)
 
 # Get data
-league_id <- 18324
 teams_elim <- scan("data/teams_elim.csv", quiet = TRUE)
 players <- get_player_data(league_id) %>% filter(!(team_id %in% teams_elim))
 teams <- get_team_data(league_id)
