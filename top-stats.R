@@ -12,6 +12,7 @@ league_id <- 18324
 teams_elim <- scan("data/teams_elim.csv", quiet = TRUE)
 players <- get_player_data(league_id) %>% filter(!(team_id %in% teams_elim))
 teams <- get_team_data(league_id)
+stats <- read_csv("data/stats.csv", show_col_types = FALSE)
 
 match_ids <- get_match_ids(players$player_id)
 match_ids_black <- scan(
@@ -50,208 +51,24 @@ for (match_id in match_ids) {
         time = odota_data$start_time,
       )
       
-      ## Kills
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Red",
-          emblem_stat = "Kills",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(kills) * 121
-        ) 
+      player_stats <- replay_data %>% filter(player_id == !!player_id)
       
-      ## Deaths
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Red",
-          emblem_stat = "Deaths",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(deaths) * -180 + 1800
-        )
-      
-      ## Creep Score
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Red",
-          emblem_stat = "Creep Score",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(creep_score) * 3
-        )
-      
-      ## GPM
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Red",
-          emblem_stat = "GPM",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(gpm) * 2
-        )
-      
-      ## Madstone Collected
-      fantasy_points <- fantasy_points %>%
-        add_row(
-          !!!base_row,
-          emblem_colour = "Red",
-          emblem_stat = "Madstone Collected",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(neutral_tokens_found) * 19
-        )
-      
-      ## Tower Kills
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Red",
-          emblem_stat = "Tower Kills",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(tower_kills) * 340
-        )
-      
-      ## Wards Placed
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Blue",
-          emblem_stat = "Wards Placed",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(wards_placed) * 113
-        )
-      
-      ## Camps Stacked
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Blue",
-          emblem_stat = "Camps Stacked",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(camps_stacked) * 170
-        )
-      
-      ## Runes Grabbed
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Blue",
-          emblem_stat = "Runes Grabbed",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(runes_grabbed) * 121
-        )
-      
-      ## Watchers Taken
-      fantasy_points <- fantasy_points %>%
-        add_row(
-          !!!base_row,
-          emblem_colour = "Blue",
-          emblem_stat = "Watchers Taken",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(watchers_taken) * 121
-        )
-      
-      ## Smokes Used
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Blue",
-          emblem_stat = "Smokes Used",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(smokes_used) * 283
-        )
-      
-      ## Lotuses Grabbed
-      fantasy_points <- fantasy_points %>%
-        add_row(
-          !!!base_row,
-          emblem_colour = "Blue",
-          emblem_stat = "Lotuses Grabbed",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(lotuses_grabbed) * 213
-        )
-      
-      ## Roshan Kills
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Green",
-          emblem_stat = "Roshan Kills",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(roshan_kills) * 850
-        )
-      
-      ## Teamfight Participation
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Green",
-          emblem_stat = "Teamfight Participation",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(teamfight_participation) * 1895
-        )
-      
-      ## Stuns
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Green",
-          emblem_stat = "Stuns",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(stuns) * 15
-        )
-      
-      ## Tormentor Kills
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Green",
-          emblem_stat = "Tormentor Kills",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(tormentor_kills) * 850
-        )
-      
-      # First Blood
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Green",
-          emblem_stat = "First Blood",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(first_blood) * 1700
-        )
-      
-      ## Courier Kills
-      fantasy_points <- fantasy_points %>% 
-        add_row(
-          !!!base_row,
-          emblem_colour = "Green",
-          emblem_stat = "Courier Kills",
-          points = replay_data %>%
-            filter(player_id == !!player_id) %>%
-            pull(courier_kills) * 850
-        )
+      for (i in seq_len(nrow(stats))) {
+        fantasy_points <- fantasy_points %>% 
+          add_row(
+            !!!base_row,
+            emblem_colour = stats$emblem_colour[i],
+            emblem_stat = stats$emblem_stat[i],
+            points = player_stats[[stats$stat_column[i]]] *
+              stats$points_multiplier[i] -
+              stats$points_threshold[i] * stats$points_multiplier[i]
+          )
+      }
     }
   }
   
   progress$tick()
-  rm(match_id, player_id, odota_data, replay_data, base_row)
+  rm(match_id, player_id, odota_data, replay_data, base_row, player_stats)
 }
 
 # Calculate player-wise top stats

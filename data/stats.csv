@@ -1,0 +1,19 @@
+emblem_colour,emblem_stat,stat_column,points_multiplier,points_threshold
+Red,Kills,kills,107,0
+Red,Deaths,deaths,-195,10
+Red,Creep Score,creep_score,3,0
+Red,GPM,gpm,2,0
+Red,Madstone Collected,neutral_tokens_found,13,0
+Red,Tower Kills,tower_kills,352,0
+Blue,Wards Placed,wards_placed,117,0
+Blue,Camps Stacked,camps_stacked,234,0
+Blue,Runes Grabbed,runes_grabbed,141,0
+Blue,Watchers Taken,watchers_taken,147,0
+Blue,Smokes Used,smokes_used,293,0
+Blue,Lotuses Grabbed,lotuses_grabbed,176,0
+Green,Roshan Kills,roshan_kills,1172,0
+Green,Teamfight Participation,teamfight_participation,2124,0
+Green,Stuns,stuns,10,0
+Green,Tormentor Kills,tormentor_kills,879,0
+Green,First Blood,first_blood,1934,0
+Green,Courier Kills,courier_kills,703,0
