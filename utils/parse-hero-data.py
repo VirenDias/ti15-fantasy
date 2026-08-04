@@ -13,6 +13,13 @@ base_adjs['Universal'] = 0
 base_adjs['Strength'] = 0
 base_adjs['Intelligence'] = 0
 base_adjs['Agility'] = 0
+
+for hero in data.values():
+    if isinstance(hero, dict):
+        for adj in hero.get('Adjectives', {}):
+            if adj not in base_adjs:
+                base_adjs[adj] = 0
+
 base_adjs = {key: base_adjs[key] for key in sorted(base_adjs)}
 base_hero = {'HeroId': 0, 'HeroName': 'npc_dota_hero_base'}
 base_hero.update(base_adjs)

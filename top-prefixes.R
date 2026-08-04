@@ -24,34 +24,6 @@ match_ids_black <- scan(
 )
 match_ids <- setdiff(match_ids, match_ids_black)
 matches_odota <- get_match_odota_data(match_ids)
-matches_stratz <- get_match_stratz_data(match_ids)
-
-# Determine whether a match is the last possible in a series
-series <- data.frame(
-  series_id = as.numeric(),
-  best_of = as.numeric(),
-  match_id = as.numeric(),
-  time = as.numeric()
-)
-for (match in matches_odota) {
-  series <- series %>%
-    add_row(
-      series_id = match$series_id,
-      best_of = switch(
-        as.character(match$series_type), 
-        "0" = 1,
-        "1" = 3,
-        "2" = 5, 
-        "3" = 2
-      ),
-      match_id = match$match_id,
-      time = match$start_time
-    )
-}
-series <- series %>%
-  group_by(series_id) %>%
-  mutate(clutch = rank(time) == best_of) %>%
-  ungroup()
 
 # Calculate prefix incidences
 prefix_incids <- data.frame(
@@ -70,12 +42,6 @@ progress <- progress_bar$new(
   clear = FALSE
 )
 for (match in matches_odota) {
-  picks <- if (is.null(unlist(match$picks_bans))) {
-    NULL
-  } else {
-    match$picks_bans %>% bind_rows() %>% filter(is_pick == TRUE)
-  }
-  
   for (player in match$players) {
     if (player$account_id %in% players$player_id) {
       base_row <- list2(
@@ -83,83 +49,18 @@ for (match in matches_odota) {
         time = match$start_time,
       )
       
-      # Balanced
-      ## +8% when playing a Universal Hero
-      prefix_incids <- prefix_incids %>%
-        add_row(
-          !!!base_row,
-          prefix_name = "Balanced",
-          cond = player$hero_id %in%
-            (heroes %>% filter(universal == 1) %>% pull(hero_id))
-        )
-      
-      # Bestial
-      ## +17% if playing a hero with Horns or Wings
-      prefix_incids <- prefix_incids %>%
-        add_row(
-          !!!base_row,
-          prefix_name = "Bestial",
-          cond = player$hero_id %in%
-            (heroes %>% filter(horns == 1 | wings == 1) %>% pull(hero_id))
-        )
-      
-      # Brawny
-      ## +13% when playing a Strength Hero
-      prefix_incids <- prefix_incids %>% 
-        add_row(
-          !!!base_row,
-          prefix_name = "Brawny",
-          cond = player$hero_id %in% 
-            (heroes %>% filter(strength == 1) %>% pull(hero_id))
-        )
-      
-      # Canny
-      ## +21% when playing an Intelligence Hero
-      prefix_incids <- prefix_incids %>% 
-        add_row(
-          !!!base_row,
-          prefix_name = "Canny",
-          cond = player$hero_id %in% 
-            (heroes %>% filter(intelligence == 1) %>% pull(hero_id))
-        )
-      
       # Cerulean
-      ## +22% when playing a Blue Hero
-      prefix_incids <- prefix_incids %>% 
+      ## +11% when playing a blue hero
+      prefix_incids <- prefix_incids %>%
         add_row(
           !!!base_row,
           prefix_name = "Cerulean",
-          cond = player$hero_id %in% 
+          cond = player$hero_id %in%
             (heroes %>% filter(blue == 1) %>% pull(hero_id))
         )
-      
-      # Clutch
-      ## +10% when playing the last possible match of a series
-      prefix_incids <- prefix_incids %>%
-        add_row(
-          !!!base_row,
-          prefix_name = "Clutch",
-          cond = series %>% filter(match_id == match$match_id) %>% pull(clutch)
-        )
-      
-      # Coveted
-      ## +19% when that player's hero is chosen last
-      prefix_incids <- prefix_incids %>%
-        add_row(
-          !!!base_row,
-          prefix_name = "Coveted",
-          cond = if (is.null(picks)) {
-            NA
-          } else {
-            picks %>%
-              filter(team == filter(picks, hero_id == player$hero_id)$team) %>%
-              slice_max(order_by = order, n = 1) %>%
-              pull(hero_id) == player$hero_id
-          }
-        )
-      
+
       # Crimson
-      ## +6% when playing a Red Hero
+      ## +6% when playing a red hero
       prefix_incids <- prefix_incids %>% 
         add_row(
           !!!base_row,
@@ -168,18 +69,8 @@ for (match in matches_odota) {
             (heroes %>% filter(red == 1) %>% pull(hero_id))
         )
       
-      # Dashing
-      ## +16% when playing an Agility Hero
-      prefix_incids <- prefix_incids %>% 
-        add_row(
-          !!!base_row,
-          prefix_name = "Dashing",
-          cond = player$hero_id %in% 
-            (heroes %>% filter(agility == 1) %>% pull(hero_id))
-        )
-      
       # Elemental
-      ## +16% when playing an Aquatic, Fiery, or Icy Hero
+      ## +8% when playing an Aquatic, Fiery, or Icy Hero
       prefix_incids <- prefix_incids %>% 
         add_row(
           !!!base_row,
@@ -193,55 +84,37 @@ for (match in matches_odota) {
         )
       
       # Emerald
-      ## +22% when playing a Green Hero
-      prefix_incids <- prefix_incids %>% 
-        add_row(
-          !!!base_row,
-          prefix_name = "Emerald",
-          cond = player$hero_id %in% 
-            (heroes %>% filter(green == TRUE) %>% pull(hero_id))
-        )
-      
-      # Glamorous
-      ## +25% when the player has an Arcana equipped
+      ## +6% when playing a green hero
       prefix_incids <- prefix_incids %>%
         add_row(
           !!!base_row,
-          prefix_name = "Glamorous",
-          cond = if (length(player$cosmetics) == 0) {
-            FALSE
-          } else {
-            sapply(
-              X = player$cosmetics,
-              FUN = function(x) {
-                if (is.null(unlist(x$item_rarity)) | 
-                    is.null(unlist(x$used_by_heroes))) {
-                  FALSE
-                } else {
-                  if (x$used_by_heroes %in% heroes$hero_name) {
-                    x$item_rarity == "arcana"
-                  } else {
-                    FALSE
-                  }
-                }
-              }
-            ) %>%
-              sum() > 0
-          }
+          prefix_name = "Emerald",
+          cond = player$hero_id %in%
+            (heroes %>% filter(green == 1) %>% pull(hero_id))
         )
-      
-      # Hirsute
-      ## +12% when playing a Bearded or Fuzzy Hero
-      prefix_incids <- prefix_incids %>% 
+
+      # Golden
+      ## +8% when playing a yellow or brown hero
+      prefix_incids <- prefix_incids %>%
         add_row(
           !!!base_row,
-          prefix_name = "Hirsute",
-          cond = player$hero_id %in% 
-            (heroes %>% filter(bearded == 1 | fuzzy == 1) %>% pull(hero_id))
+          prefix_name = "Golden",
+          cond = player$hero_id %in%
+            (heroes %>% filter(yellow == 1 | brown == 1) %>% pull(hero_id))
         )
-      
+
+      # Heroic
+      ## +9% when playing a Caped or Masked Hero
+      prefix_incids <- prefix_incids %>%
+        add_row(
+          !!!base_row,
+          prefix_name = "Heroic",
+          cond = player$hero_id %in%
+            (heroes %>% filter(cape == 1 | mask == 1) %>% pull(hero_id))
+        )
+
       # Otherworldly
-      ## +24% when playing an Undead, Demon, or Spirit Hero
+      ## +7% when playing an Undead, Demon, or Spirit Hero
       prefix_incids <- prefix_incids %>% 
         add_row(
           !!!base_row,
@@ -253,59 +126,18 @@ for (match in matches_odota) {
             )
         )
       
-      # Sacrificial
-      ## +19% when that player's hero is chosen first
+      # Royal
+      ## +10% when playing a purple hero
       prefix_incids <- prefix_incids %>%
         add_row(
           !!!base_row,
-          prefix_name = "Sacrificial",
-          cond = if (is.null(picks)) {
-            NA
-          } else {
-            picks %>%
-              filter(team == filter(picks, hero_id == player$hero_id)$team) %>%
-              slice_min(order_by = order, n = 1) %>%
-              pull(hero_id) == player$hero_id
-          }
+          prefix_name = "Royal",
+          cond = player$hero_id %in%
+            (heroes %>% filter(purple == 1) %>% pull(hero_id))
         )
     }
   }
-  
-  progress$tick()
-  rm(match, player, base_row, picks)
-}
 
-progress <- progress_bar$new(
-  format = "(:spin) [:bar] :percent | ETA: :eta",
-  total = length(match_ids),
-  complete = "=",
-  incomplete = "-",
-  current = ">",
-  clear = FALSE
-)
-for (match in matches_stratz) {
-  for (player in match$match$players) {
-    if (player$steamAccountId %in% players$player_id) {
-      base_row <- list2(
-        player_id = player$steamAccountId,
-        time = match$match$startDateTime,
-      )
-      
-      # Virtuoso
-      ## +22% when playing a hero they are a Master or Grandmaster with
-      prefix_incids <- prefix_incids %>%
-        add_row(
-          !!!base_row,
-          prefix_name = "Virtuoso",
-          cond = if(is.null(player$dotaPlus$level)) {
-            FALSE
-          } else {
-            player$dotaPlus$level >= 25
-          }
-        )
-    }
-  }
-  
   progress$tick()
   rm(match, player, base_row)
 }
