@@ -1,54 +1,49 @@
-source("src/get-player-data.R")
-
 library(tidyverse)
 library(httr)
 
 get_team_data <- function(league_id) {
   message("Retrieving team data")
-  
-  dir_path <- paste0("data")
+
+  dir_path <- "data"
   file_path <- paste0(dir_path, "/teams.csv")
-  
+
   if (file.exists(file_path)) {
-    # Read data from disk
     teams <- read_csv(file_path, progress = FALSE, show_col_types = FALSE)
   } else {
-    # Get team IDs
-    team_ids <- get_player_data(league_id = league_id)$team_id
-    team_ids <- unique(team_ids)
-    
-    # Get team data
-    teams <- data.frame(
-      team_id = as.numeric(),
-      team_name = as.character(),
-      team_tag = as.character()
+    response <- GET(
+      url = "https://www.dota2.com/webapi/IDOTA2League/GetLeagueData/v001",
+      query = list(league_id = league_id)
     )
-    for (team_id in team_ids) {
-      response_team <- GET(
-        url = "https://www.dota2.com/webapi/IDOTA2Teams/GetSingleTeamInfo/v001",
-        query = list(team_id = team_id)
-      )
-      if (http_status(response_team)$category != "Success") {
-        stop("Unsuccessful request")
-      }
-      
-      # Store team data
-      teams <- teams %>%
-        add_row(
-          team_id = as.numeric(content(response_team)$team_id), 
-          team_name = as.character(content(response_team)$name), 
-          team_tag = as.character(content(response_team)$tag)
-        )
+    if (http_status(response)$category != "Success") {
+      stop("Unsuccessful request")
     }
-    teams <- tibble(teams)
-    
-    # Write the data to disk
+
+    # The competing teams are listed in the bracket standings
+    teams <- content(response)$node_groups %>%
+      map("team_standings") %>%
+      list_flatten() %>%
+      compact() %>%
+      map(
+        ~ tibble(
+          team_id = as.numeric(.x$team_id),
+          team_name = as.character(.x$team_name),
+          team_tag = as.character(.x$team_tag)
+        )
+      ) %>%
+      list_rbind() %>%
+      distinct()
+
+    # Caching an empty response would keep failing every later run
+    if (nrow(teams) == 0) {
+      stop(paste0("League ", league_id, " returned no teams"))
+    }
+
     if (!dir.exists(dir_path)) {
       dir.create(dir_path)
     }
     teams <- teams %>% arrange(team_id)
     write_csv(x = teams, file = file_path)
   }
-  
+
   return(teams)
 }

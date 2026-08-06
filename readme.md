@@ -12,7 +12,8 @@
 
 2. **Update:**
 
-   * `config.R` (league ID, patch numbers, phase)
+   * `config.R` (league ID, starting patch, phase, and any tier 1 or 2 events
+     OpenDota marks as excluded)
    * `data/heroes.txt` (extract `npc_heroes.txt` from
      `dota 2 beta/game/dota/pak01_dir.vpk`)
    * `data/stats.csv` (with the new points system)
@@ -27,7 +28,11 @@
    * `data/teams_elim.csv`
 
 Everything else is fetched on the first run: the roster and teams from Valve, the
-match IDs from datdota, the match data from OpenDota, and the replays from Valve.
+match list and match data from OpenDota, and the replays from Valve.
+
+The match list comes from OpenDota's SQL explorer, which is the only place the
+league tier is exposed. A patch is a span of time, so `starting_patch` is turned
+into a date using the release dates OpenDota publishes.
 
 Two things to know when supplying the data above:
 
@@ -35,8 +40,7 @@ Two things to know when supplying the data above:
   per line. If it fails, look for a line holding two and split them.
 * Each prefix and suffix needs a matching condition in `src/compile-match-data.R`.
   Renaming or adding one without that fails the run rather than silently
-  producing an empty column. `the Cruel` is deliberately unimplemented, as no
-  available data source records where a player died.
+  producing an empty column. `the Cruel` is currently unimplemented.
 
 # Updating the Replay Parser
 
@@ -47,9 +51,8 @@ Two things to know when supplying the data above:
 
 The parser is the only source of stat values, so a property renamed by a new
 patch produces a silently empty column rather than an error. After the first
-matches are parsed, check a few against the same fields on OpenDota
-(`kills`, `deaths`, `tower_kills`, `camps_stacked`, `roshan_kills` and
-`courier_kills` should match exactly) before trusting a run.
+matches are parsed, compare a few against the same fields on OpenDota before
+trusting a run.
 
 # Running the Analysis
 

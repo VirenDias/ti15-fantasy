@@ -18,8 +18,7 @@ prefixes <- read_csv("data/prefixes.csv", show_col_types = FALSE)
 suffixes <- read_csv("data/suffixes.csv", show_col_types = FALSE)
 banners <- read_csv("data/banners.csv", show_col_types = FALSE)
 
-# The banner shape has no consumer here yet, but a typo in it would only surface
-# in the calculator, so it is validated at the one place the pipeline runs
+# Nothing here consumes the banners, but a typo would only surface much later
 banners <- banners %>% arrange(phase, player_role, position)
 stopifnot(
   # Every colour must be one an emblem can actually hold
@@ -46,7 +45,7 @@ stopifnot(
   current_phase %in% banners$phase
 )
 
-# Reported so that a stale phase in config.R is visible on every run
+# So a stale phase in config.R is visible on every run
 phase_banners <- banners %>%
   filter(phase == current_phase) %>%
   summarise(shape = paste(emblem_colour, collapse = " "), .by = player_role)
@@ -63,10 +62,12 @@ match_ids <- get_match_ids(players$player_id)
 match_ids_black <- scan("data/matches/match_ids_black.csv", quiet = TRUE)
 match_ids <- setdiff(match_ids, match_ids_black)
 
-# A roster that is not 2 Core, 1 Mid and 2 Support still yields usable data for
-# whichever roles are complete, so this warns rather than stops
+# Whichever roles are complete still yield usable data, so this warns rather
+# than stops
 odd_rosters <- players %>%
   count(team_id, player_role, name = "players") %>%
+  # A role with nobody in it produces no row to compare
+  complete(team_id, player_role = names(role_size), fill = list(players = 0)) %>%
   filter(!player_role %in% names(role_size) | players != role_size[player_role])
 if (nrow(odd_rosters) > 0) {
   warning(
@@ -82,7 +83,6 @@ if (nrow(odd_rosters) > 0) {
   )
 }
 
-# Compile the per-match data every statistic below is derived from
 match_data <- compile_match_data(
   match_ids = match_ids,
   players = players,
@@ -106,8 +106,7 @@ if (missing_stats > 0) {
   )
 }
 
-# Calculate role-wise statistics, pairing the players a team fields in a role so
-# that the covariance between them survives
+# Pairing keeps the covariance between the players a team fields in a role
 role_matches <- pair_role_matches(match_data, metric_cols)
 role_stats <- summarise_metrics(
   role_matches,
@@ -115,8 +114,8 @@ role_stats <- summarise_metrics(
   c("team_id", "player_role")
 ) %>%
   left_join(teams %>% select(team_id, team_name), by = "team_id") %>%
-  # Masked before the formula, because if_else evaluates both branches and for a
-  # stat metric this would be the square root of a negative
+  # Masked first, because if_else evaluates both branches and a stat metric
+  # would be the square root of a negative
   mutate(prob = if_else(metric %in% indicator_cols, average, NA_real_)) %>%
   mutate(prob_se = sqrt(prob * (1 - prob) / ess)) %>%
   select(

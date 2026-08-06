@@ -6,18 +6,18 @@ library(tidyverse)
 role_size <- c(Core = 2L, Mid = 1L, Support = 2L)
 
 pair_role_matches <- function(match_data, metric_cols) {
-  # mean() without na.rm is deliberate: if any player in the role is missing a
-  # metric for that match, the role has no score for it either
+  # mean() without na.rm: a player missing a metric means the role has no score
+  # for it either
   paired <- match_data %>%
     filter(player_role %in% names(role_size)) %>%
     summarise(
       n_players = n(),
       across(all_of(metric_cols), mean),
+      # is_radiant groups too, roster-mates occasionally end up on opposing
+      # teams and those matches must not be averaged together
       .by = c(team_id, player_role, match_id, is_radiant, start_time)
     )
 
-  # is_radiant is in the grouping because roster-mates occasionally end up on
-  # opposing teams, and those matches must not be averaged together
   return(
     paired %>%
       filter(n_players == role_size[player_role]) %>%
@@ -33,8 +33,8 @@ summarise_metrics <- function(
 ) {
   stopifnot(!any(is.na(matches$start_time)))
 
-  # One weight per unit-match, shared by every metric, so that the summaries and
-  # the covariance below are mutually consistent
+  # One weight per unit-match, shared by every metric, so the summaries and the
+  # covariance stay consistent
   return(
     matches %>%
       mutate(
@@ -54,8 +54,8 @@ summarise_metrics <- function(
 }
 
 calc_wtd_cov <- function(mat, weights) {
-  # Rows are dropped listwise below, so a column that is mostly or entirely
-  # empty would take the whole unit with it
+  # Rows are dropped listwise below, so a mostly empty column would take the
+  # whole unit with it
   usable <- colSums(!is.na(mat)) >= 2
   mat <- mat[, usable, drop = FALSE]
   if (ncol(mat) == 0) {

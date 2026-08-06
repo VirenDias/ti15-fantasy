@@ -39,8 +39,7 @@ read_odota_data <- function(match_ids) {
   matches <- vector("list", length(match_ids))
   match_players <- vector("list", length(match_ids))
 
-  # One match is parsed at a time: holding every match as a nested list runs to
-  # several gigabytes
+  # One at a time: every match as a nested list runs to several gigabytes
   for (i in seq_along(match_ids)) {
     match <- read_json(paste0(dir_path, "/", match_ids[i], ".json"))
     match_id <- num_or_na(match$match_id)
@@ -59,7 +58,7 @@ read_odota_data <- function(match_ids) {
       } else {
         as.character(match$replay_url)
       },
-      # Match-level, so it is resolved once instead of once per player
+      # Resolved once per match instead of once per player
       tormentor_death = any(
         map_lgl(match$players, ~ !is.null(.x$killed_by$npc_dota_miniboss))
       )
@@ -109,8 +108,7 @@ derive_series_data <- function(matches) {
         match_no = rank(start_time, ties.method = "first"),
         .by = series_id
       ) %>%
-      # OpenDota has no field for a match's position in its series, so it is
-      # inferred from the order the matches were played
+      # OpenDota has no field for a match's position in its series
       mutate(clutch = match_no == best_of) %>%
       select(-series_type, -match_no)
   )
@@ -125,7 +123,7 @@ read_replay_data <- function(match_ids) {
     match_ids
   )
 
-  # Silently skipping matches would quietly shrink every player's sample
+  # Skipping a match here would quietly shrink every player's sample
   missing <- !file.exists(file_paths) | file.size(file_paths) == 0
   if (any(missing)) {
     stop(
@@ -155,19 +153,24 @@ compile_match_data <- function(
     suffixes,
     fetch_replays = TRUE
 ) {
-  # Downloads anything missing, without parsing every match into memory at once
+  # paste0 recycles a zero-length vector to "", turning the file checks below
+  # into a single nonsensical path
+  if (length(match_ids) == 0) {
+    stop("No match ids to compile, check data/matches/match_ids.csv")
+  }
+
+  # Downloads anything missing without parsing it into memory
   get_match_odota_data(match_ids, parse = FALSE)
 
   odota <- read_odota_data(match_ids)
 
-  # The replay stats are keyed on the file name while these are keyed on the id
-  # inside the json, so a disagreement would silently empty every stat
+  # The replay stats are keyed on the file name and these on the id inside the
+  # json, so a disagreement would silently empty every stat
   stopifnot(setequal(odota$matches$match_id, match_ids))
 
   matches <- derive_series_data(odota$matches)
 
-  # The replay urls come from the same pass that read the OpenDota data, so those
-  # files are never parsed twice
+  # The replay urls come from the pass above, so the json is never read twice
   if (fetch_replays) {
     get_match_replay_data(matches$match_id, matches$replay_url)
   }
@@ -179,9 +182,9 @@ compile_match_data <- function(
   if (length(missing_cols) > 0) {
     stop(
       paste0(
-        "Stat columns absent from the parsed replays: ",
-        paste(missing_cols, collapse = ", "),
-        ". utils/fantasy.jar may need rebuilding for this patch."
+        "Stat columns named in data/stats.csv but absent from the replays ",
+        "parsed by utils/fantasy.jar: ",
+        paste(missing_cols, collapse = ", ")
       )
     )
   }
@@ -214,8 +217,7 @@ compile_match_data <- function(
     `the Underdog` = lose == 1
   )
 
-  # A renamed row in either csv would otherwise surface as a silently empty
-  # column much further downstream
+  # A renamed row would otherwise surface as a silently empty column
   stopifnot(
     setequal(names(prefix_conds), prefixes$prefix_name),
     setequal(names(suffix_conds), suffixes$suffix_name)
@@ -238,8 +240,7 @@ compile_match_data <- function(
   match_data <- odota$match_players %>%
     inner_join(players, by = "player_id")
 
-  # A hero that was played but is absent from heroes.txt means the extracted
-  # file is stale, and every prefix for those matches would resolve to NA
+  # A missing hero means heroes.txt is stale, and its prefixes would all be NA
   unknown_heroes <- sort(setdiff(match_data$hero_id, heroes$hero_id))
   if (length(unknown_heroes) > 0) {
     stop(

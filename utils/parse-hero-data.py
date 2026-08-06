@@ -2,9 +2,7 @@ import sys
 import vdf
 import re
 
-# Read in the data
-# with open(sys.argv[1]) as file:
-with open('data/heroes.txt') as file:
+with open(sys.argv[1]) as file:
     data = vdf.load(file)['DOTAHeroes']
 
 # Extract the base data
