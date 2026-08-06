@@ -9,8 +9,8 @@ source("src/summarise-matches.R")
 library(tidyverse)
 
 # Get data
-teams_elim <- scan("data/teams_elim.csv", quiet = TRUE)
-players <- get_player_data(league_id) %>% filter(!(team_id %in% teams_elim))
+players <- get_player_data(league_id) %>%
+  filter(!(team_id %in% teams_eliminated))
 teams <- get_team_data(league_id)
 heroes <- get_hero_data(python_exe)
 stats <- read_csv("data/stats.csv", show_col_types = FALSE)
@@ -58,9 +58,7 @@ for (i in seq_len(nrow(period_banners))) {
   )
 }
 
-match_ids <- get_match_ids(players$player_id)
-match_ids_black <- scan("data/matches/match_ids_black.csv", quiet = TRUE)
-match_ids <- setdiff(match_ids, match_ids_black)
+match_ids <- setdiff(get_match_ids(players$player_id), match_blacklist)
 
 # Whichever roles are complete still yield usable data, so this warns rather
 # than stops

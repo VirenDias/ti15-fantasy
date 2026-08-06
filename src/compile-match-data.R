@@ -42,8 +42,7 @@ read_replay_data <- function(match_ids) {
       paste0(
         sum(missing), " of ", length(file_paths),
         " matches have no parsed replay in ", dir_path,
-        ". Reparse them, or blacklist them in ",
-        "data/matches/match_ids_black.csv"
+        ". Reparse them, or add them to match_blacklist in config.R"
       )
     )
   }

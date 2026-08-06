@@ -2,14 +2,9 @@
 
 1. **Delete:**
 
-   * `results/*`
-   * `data/match_data.csv`
-   * `data/matches/matches.csv`
-   * `data/matches/match_players.csv`
-   * `data/matches/replay/*`
-   * `data/matches/match_ids.csv`
    * `data/players.csv`
    * `data/teams.csv`
+   * `data/matches/replay/*`
 
 2. **Update:**
 
@@ -22,20 +17,21 @@
    * `data/suffixes.csv`
    * `data/banners.csv` (with the emblem colours and order of each War Banner)
 
-3. **Clean out and update as the tournament progresses:**
+3. **Update as the tournament progresses:**
 
-   * `config.R` (the period, once the second one begins)
-   * `data/matches/match_ids_black.csv`
-   * `data/teams_elim.csv`
+   * `config.R` (`current_period` and `teams_eliminated` between periods, and
+     `match_blacklist` if a match keeps failing to fetch or parse)
 
-Everything else is fetched on the first run: the roster and teams from Valve, the
-match list and match data from OpenDota, and the replays from Valve.
+Only the three files above are read from disk when they exist, so they are the
+only ones a new tournament needs deleted. The rosters and teams are kept because
+they can be corrected by hand; the parsed replays because they take hours to
+rebuild. Everything else is refetched and overwritten on every run.
 
 The match list and the match data both come from OpenDota's SQL explorer, a few
-whole-set queries rather than one request per match. A patch is a span of time,
-so `starting_patch` is turned into a date using the release dates OpenDota
-publishes. The explorer stores a replay's cluster and salt rather than the url
-built from them.
+whole-set queries rather than one request per match, cheap enough to repeat every
+run. A patch is a span of time, so `starting_patch` is turned into a date using
+the release dates OpenDota publishes. The explorer stores a replay's cluster and
+salt rather than the url built from them.
 
 Two things to know when supplying the data above:
 

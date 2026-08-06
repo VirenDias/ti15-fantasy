@@ -58,56 +58,51 @@ get_match_ids <- function(
   dir_path <- "data/matches"
   file_path <- paste0(dir_path, "/match_ids.csv")
 
-  if (file.exists(file_path)) {
-    match_ids <- scan(file_path, quiet = TRUE)
-  } else {
-    # A patch is a span of time, so the window opens at its release
-    patch_start <- get_patch_start(patch)
-    message(
+  # A patch is a span of time, so the window opens at its release
+  patch_start <- get_patch_start(patch)
+  message(
+    paste0(
+      "Patch ", patch, " released ",
+      format(
+        as.POSIXct(patch_start, origin = "1970-01-01", tz = "UTC"),
+        "%Y-%m-%d"
+      )
+    )
+  )
+
+  # League tiers are only exposed through the sql explorer
+  query <- paste0(
+    "SELECT DISTINCT m.match_id ",
+    "FROM matches m ",
+    "JOIN player_matches pm ON pm.match_id = m.match_id ",
+    "JOIN leagues l ON l.leagueid = m.leagueid ",
+    "WHERE pm.account_id IN (",
+    paste(format(player_ids, scientific = FALSE, trim = TRUE), collapse = ","),
+    ") AND m.start_time >= ", patch_start,
+    " AND (l.tier IN (\'premium\', \'professional\')",
+    if (length(whitelist) > 0) {
+      paste0(" OR l.leagueid IN (", paste(whitelist, collapse = ","), ")")
+    } else {
+      ""
+    },
+    ")"
+  )
+
+  match_ids <- map_dbl(query_explorer(query), ~ num_or_na(.x$match_id))
+  if (length(match_ids) == 0) {
+    stop(
       paste0(
-        "Patch ", patch, " released ",
-        format(
-          as.POSIXct(patch_start, origin = "1970-01-01", tz = "UTC"),
-          "%Y-%m-%d"
-        )
+        "OpenDota returned no matches for these players since patch ", patch
       )
     )
-
-    # League tiers are only exposed through the sql explorer
-    query <- paste0(
-      "SELECT DISTINCT m.match_id ",
-      "FROM matches m ",
-      "JOIN player_matches pm ON pm.match_id = m.match_id ",
-      "JOIN leagues l ON l.leagueid = m.leagueid ",
-      "WHERE pm.account_id IN (",
-      paste(format(player_ids, scientific = FALSE, trim = TRUE), collapse = ","),
-      ") AND m.start_time >= ", patch_start,
-      " AND (l.tier IN (\'premium\', \'professional\')",
-      if (length(whitelist) > 0) {
-        paste0(" OR l.leagueid IN (", paste(whitelist, collapse = ","), ")")
-      } else {
-        ""
-      },
-      ")"
-    )
-
-    match_ids <- map_dbl(query_explorer(query), ~ num_or_na(.x$match_id))
-
-    # Caching an empty response would keep failing every later run
-    if (length(match_ids) == 0) {
-      stop(
-        paste0(
-          "OpenDota returned no matches for these players since patch ", patch
-        )
-      )
-    }
-
-    if (!dir.exists(dir_path)) {
-      dir.create(dir_path)
-    }
-    match_ids <- sort(unique(match_ids))
-    write_csv(x = as.data.frame(match_ids), file = file_path, col_names = FALSE)
   }
+
+  # Written for auditing only, since the query runs on every pass
+  if (!dir.exists(dir_path)) {
+    dir.create(dir_path)
+  }
+  match_ids <- sort(unique(match_ids))
+  write_csv(x = as.data.frame(match_ids), file = file_path, col_names = FALSE)
 
   return(match_ids)
 }
@@ -119,26 +114,6 @@ get_match_odota_data <- function(match_ids, chunk_size = 500) {
   dir_path <- "data/matches"
   matches_path <- paste0(dir_path, "/matches.csv")
   players_path <- paste0(dir_path, "/match_players.csv")
-
-  if (file.exists(matches_path) & file.exists(players_path)) {
-    matches <- read_csv(matches_path, progress = FALSE, show_col_types = FALSE)
-    match_players <- read_csv(
-      players_path,
-      progress = FALSE,
-      show_col_types = FALSE
-    )
-
-    # Refetched rather than merged when the tournament adds matches, since the
-    # whole set costs one request per chunk
-    if (all(match_ids %in% matches$match_id)) {
-      return(
-        list(
-          matches = matches %>% filter(match_id %in% match_ids),
-          match_players = match_players %>% filter(match_id %in% match_ids)
-        )
-      )
-    }
-  }
 
   # Chunked to keep the query string inside any url length limit
   id_lists <- match_ids %>%
@@ -189,8 +164,8 @@ get_match_odota_data <- function(match_ids, chunk_size = 500) {
     stop(
       paste0(
         length(missing), " of ", length(match_ids),
-        " matches are absent from OpenDota. Blacklist them in ",
-        "data/matches/match_ids_black.csv"
+        " matches are absent from OpenDota. Add them to match_blacklist ",
+        "in config.R"
       )
     )
   }
