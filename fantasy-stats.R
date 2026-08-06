@@ -19,41 +19,41 @@ suffixes <- read_csv("data/suffixes.csv", show_col_types = FALSE)
 banners <- read_csv("data/banners.csv", show_col_types = FALSE)
 
 # Nothing here consumes the banners, but a typo would only surface much later
-banners <- banners %>% arrange(phase, player_role, position)
+banners <- banners %>% arrange(period, player_role, position)
 stopifnot(
   # Every colour must be one an emblem can actually hold
   all(banners$emblem_colour %in% stats$emblem_colour),
-  # Positions run 1..n per role and phase, since adjacency depends on them
+  # Positions run 1..n per role and period, since adjacency depends on them
   banners %>%
-    summarise(ok = all(position == seq_along(position)), .by = c(phase, player_role)) %>%
+    summarise(ok = all(position == seq_along(position)), .by = c(period, player_role)) %>%
     pull(ok) %>%
     all(),
   # No two emblems of the same colour sit next to each other
   banners %>%
     summarise(ok = all(emblem_colour != lag(emblem_colour), na.rm = TRUE),
-              .by = c(phase, player_role)) %>%
+              .by = c(period, player_role)) %>%
     pull(ok) %>%
     all(),
-  # Phase 2 keeps the phase 1 emblems and appends to them
+  # Period 2 keeps the period 1 emblems and appends to them
   banners %>%
-    summarise(shape = paste(emblem_colour, collapse = ""), .by = c(phase, player_role)) %>%
-    pivot_wider(names_from = phase, values_from = shape, names_prefix = "p") %>%
+    summarise(shape = paste(emblem_colour, collapse = ""), .by = c(period, player_role)) %>%
+    pivot_wider(names_from = period, values_from = shape, names_prefix = "p") %>%
     mutate(ok = startsWith(p2, p1)) %>%
     pull(ok) %>%
     all(),
-  # The configured phase must be one the file describes
-  current_phase %in% banners$phase
+  # The configured period must be one the file describes
+  current_period %in% banners$period
 )
 
-# So a stale phase in config.R is visible on every run
-phase_banners <- banners %>%
-  filter(phase == current_phase) %>%
+# So a stale period in config.R is visible on every run
+period_banners <- banners %>%
+  filter(period == current_period) %>%
   summarise(shape = paste(emblem_colour, collapse = " "), .by = player_role)
-for (i in seq_len(nrow(phase_banners))) {
+for (i in seq_len(nrow(period_banners))) {
   message(
     paste0(
-      "Phase ", current_phase, " ", phase_banners$player_role[i], " banner: ",
-      phase_banners$shape[i]
+      "Period ", current_period, " ", period_banners$player_role[i], " banner: ",
+      period_banners$shape[i]
     )
   )
 }

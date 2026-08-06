@@ -2,94 +2,6 @@ source("src/get-match-data.R")
 
 library(tidyverse)
 library(rlang)
-library(jsonlite)
-library(progress)
-
-num_or_na <- function(value) {
-  return(if (is.null(value)) NA_real_ else as.numeric(value))
-}
-
-read_odota_data <- function(match_ids) {
-  message("Reading OpenDota data")
-
-  dir_path <- "data/matches/odota"
-
-  # Skipping a match here would quietly shrink every player's sample
-  missing <- !file.exists(paste0(dir_path, "/", match_ids, ".json"))
-  if (any(missing)) {
-    stop(
-      paste0(
-        sum(missing), " of ", length(match_ids),
-        " matches have no OpenDota data in ", dir_path,
-        ". Refetch them, or blacklist them in ",
-        "data/matches/match_ids_black.csv"
-      )
-    )
-  }
-
-  progress <- progress_bar$new(
-    format = "(:spin) [:bar] :percent | ETA: :eta",
-    total = length(match_ids),
-    complete = "=",
-    incomplete = "-",
-    current = ">",
-    clear = FALSE
-  )
-
-  matches <- vector("list", length(match_ids))
-  match_players <- vector("list", length(match_ids))
-
-  # One at a time: every match as a nested list runs to several gigabytes
-  for (i in seq_along(match_ids)) {
-    match <- read_json(paste0(dir_path, "/", match_ids[i], ".json"))
-    match_id <- num_or_na(match$match_id)
-
-    matches[[i]] <- tibble(
-      match_id = match_id,
-      series_id = num_or_na(match$series_id),
-      series_type = num_or_na(match$series_type),
-      start_time = num_or_na(match$start_time),
-      duration = num_or_na(match$duration),
-      first_blood_time = num_or_na(match$first_blood_time),
-      radiant_team_id = num_or_na(match$radiant_team_id),
-      dire_team_id = num_or_na(match$dire_team_id),
-      replay_url = if (is.null(match$replay_url)) {
-        NA_character_
-      } else {
-        as.character(match$replay_url)
-      },
-      # Resolved once per match instead of once per player
-      tormentor_death = any(
-        map_lgl(match$players, ~ !is.null(.x$killed_by$npc_dota_miniboss))
-      )
-    )
-
-    match_players[[i]] <- tibble(
-      match_id = match_id,
-      player_id = map_dbl(match$players, ~ num_or_na(.x$account_id)),
-      hero_id = map_dbl(match$players, ~ num_or_na(.x$hero_id)),
-      is_radiant = map_lgl(
-        match$players,
-        ~ if (!is.null(.x$isRadiant)) {
-          isTRUE(.x$isRadiant)
-        } else {
-          num_or_na(.x$player_slot) < 128
-        }
-      ),
-      lose = map_dbl(match$players, ~ num_or_na(.x$lose))
-    )
-
-    progress$tick()
-    rm(match, match_id)
-  }
-
-  return(
-    list(
-      matches = list_rbind(matches),
-      match_players = list_rbind(match_players)
-    )
-  )
-}
 
 derive_series_data <- function(matches) {
   return(
@@ -159,13 +71,7 @@ compile_match_data <- function(
     stop("No match ids to compile, check data/matches/match_ids.csv")
   }
 
-  # Downloads anything missing without parsing it into memory
-  get_match_odota_data(match_ids, parse = FALSE)
-
-  odota <- read_odota_data(match_ids)
-
-  # The replay stats are keyed on the file name and these on the id inside the
-  # json, so a disagreement would silently empty every stat
+  odota <- get_match_odota_data(match_ids)
   stopifnot(setequal(odota$matches$match_id, match_ids))
 
   matches <- derive_series_data(odota$matches)

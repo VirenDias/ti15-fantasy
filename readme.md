@@ -4,7 +4,8 @@
 
    * `results/*`
    * `data/match_data.csv`
-   * `data/matches/odota/*`
+   * `data/matches/matches.csv`
+   * `data/matches/match_players.csv`
    * `data/matches/replay/*`
    * `data/matches/match_ids.csv`
    * `data/players.csv`
@@ -12,7 +13,7 @@
 
 2. **Update:**
 
-   * `config.R` (league ID, starting patch, phase, and any tier 1 or 2 events
+   * `config.R` (league ID, starting patch, period, and any tier 1 or 2 events
      OpenDota marks as excluded)
    * `data/heroes.txt` (extract `npc_heroes.txt` from
      `dota 2 beta/game/dota/pak01_dir.vpk`)
@@ -23,16 +24,18 @@
 
 3. **Clean out and update as the tournament progresses:**
 
-   * `config.R` (the phase, once the second one begins)
+   * `config.R` (the period, once the second one begins)
    * `data/matches/match_ids_black.csv`
    * `data/teams_elim.csv`
 
 Everything else is fetched on the first run: the roster and teams from Valve, the
 match list and match data from OpenDota, and the replays from Valve.
 
-The match list comes from OpenDota's SQL explorer, which is the only place the
-league tier is exposed. A patch is a span of time, so `starting_patch` is turned
-into a date using the release dates OpenDota publishes.
+The match list and the match data both come from OpenDota's SQL explorer, a few
+whole-set queries rather than one request per match. A patch is a span of time,
+so `starting_patch` is turned into a date using the release dates OpenDota
+publishes. The explorer stores a replay's cluster and salt rather than the url
+built from them.
 
 Two things to know when supplying the data above:
 
