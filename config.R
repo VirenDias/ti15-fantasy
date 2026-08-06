@@ -6,7 +6,8 @@ league_whitelist <- c(19656) # Tier 1 or 2 events OpenDota tags as excluded
 # Update as the tournament progresses
 current_period <- 1 # Selects the War Banner shape
 teams_eliminated <- c() # Knocked out between periods, left out of the results
-match_blacklist <- c() # Matches that keep failing to fetch or parse
 
 weight_alpha <- NULL # Recency decay per match, NULL for 2 / (matches + 1)
 python_exe <- "C:/Users/Viren/.conda/envs/dota-compendium/python.exe"
+download_workers <- 16 # Valve throttles each connection, not the total
+parse_workers <- 8 # One jvm per worker, so below the core count

@@ -58,7 +58,7 @@ for (i in seq_len(nrow(period_banners))) {
   )
 }
 
-match_ids <- setdiff(get_match_ids(players$player_id), match_blacklist)
+match_ids <- get_match_ids(players$player_id)
 
 # Whichever roles are complete still yield usable data, so this warns rather
 # than stops

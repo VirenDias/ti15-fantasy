@@ -35,18 +35,6 @@ read_replay_data <- function(match_ids) {
     match_ids
   )
 
-  # Skipping a match here would quietly shrink every player's sample
-  missing <- !file.exists(file_paths) | file.size(file_paths) == 0
-  if (any(missing)) {
-    stop(
-      paste0(
-        sum(missing), " of ", length(file_paths),
-        " matches have no parsed replay in ", dir_path,
-        ". Reparse them, or add them to match_blacklist in config.R"
-      )
-    )
-  }
-
   return(
     file_paths %>%
       map(read_csv, col_types = cols(.default = col_double()), progress = FALSE) %>%
@@ -62,7 +50,8 @@ compile_match_data <- function(
     stats,
     prefixes,
     suffixes,
-    fetch_replays = TRUE
+    fetch_replays = TRUE,
+    min_coverage = 0.95
 ) {
   # paste0 recycles a zero-length vector to "", turning the file checks below
   # into a single nonsensical path
@@ -71,14 +60,48 @@ compile_match_data <- function(
   }
 
   odota <- get_match_odota_data(match_ids)
-  stopifnot(setequal(odota$matches$match_id, match_ids))
-
   matches <- derive_series_data(odota$matches)
 
-  # The replay urls come from the pass above, so the json is never read twice
   if (fetch_replays) {
-    get_match_replay_data(matches$match_id, matches$replay_url)
+    lost <- get_match_replay_data(matches$match_id, matches$replay_url)
+    if (nrow(lost) > 0) {
+      message("Replays that could not be obtained:")
+      lost %>%
+        count(reason) %>%
+        pwalk(~ message(paste0("  ", .y, " ", .x)))
+    }
   }
+
+  # A match missing either its OpenDota row or its replay is dropped rather than
+  # failing the run, since the sample left behind is still sound
+  parsed <- paste0("data/matches/replay/", matches$match_id, ".csv")
+  usable <- matches$match_id[file.exists(parsed)]
+  dropped <- setdiff(match_ids, usable)
+
+  # A handful is attrition, but a large share means the parser or the source
+  # broke, and statistics built on what survived would be worthless
+  if (length(usable) < min_coverage * length(match_ids)) {
+    stop(
+      paste0(
+        "Only ", length(usable), " of ", length(match_ids),
+        " matches are usable, below the ", min_coverage * 100,
+        "% needed. Check that utils/fantasy.jar still parses this patch"
+      )
+    )
+  }
+  if (length(dropped) > 0) {
+    warning(
+      paste0(
+        length(dropped), " of ", length(match_ids), " matches were dropped: ",
+        paste(head(dropped, 10), collapse = ", "),
+        if (length(dropped) > 10) ", ..." else ""
+      ),
+      call. = FALSE
+    )
+  }
+
+  match_ids <- usable
+  matches <- matches %>% filter(match_id %in% match_ids)
 
   stat_cols <- stats$stat_column
   replay_stats <- read_replay_data(match_ids)
@@ -143,6 +166,7 @@ compile_match_data <- function(
   }
 
   match_data <- odota$match_players %>%
+    filter(match_id %in% match_ids) %>%
     inner_join(players, by = "player_id")
 
   # A missing hero means heroes.txt is stale, and its prefixes would all be NA

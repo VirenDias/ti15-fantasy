@@ -5,6 +5,7 @@
    * `data/players.csv`
    * `data/teams.csv`
    * `data/matches/replay/*`
+   * `data/matches/replay_failures.csv`
 
 2. **Update:**
 
@@ -19,8 +20,7 @@
 
 3. **Update as the tournament progresses:**
 
-   * `config.R` (`current_period` and `teams_eliminated` between periods, and
-     `match_blacklist` if a match keeps failing to fetch or parse)
+   * `config.R` (`current_period` and `teams_eliminated` between periods)
 
 Only the three files above are read from disk when they exist, so they are the
 only ones a new tournament needs deleted. The rosters and teams are kept because
@@ -62,3 +62,14 @@ downloading and parsing every replay, and writes:
   emblem stat scored and which prefixes and suffixes applied
 * `results/role_stats.csv` — recency-weighted average and standard deviation per
   team, role and metric, with the number of matches behind each figure
+
+A replay is downloaded once and kept only as its parsed csv, so a rerun resumes
+wherever the last one stopped. Matches whose replay cannot be downloaded or
+parsed are reported and dropped, but the run stops if fewer than 95% survive,
+since that points at the parser rather than at the matches.
+
+Replays that keep failing are counted in `data/matches/replay_failures.csv` and
+left alone after a few runs, sooner for one Valve no longer serves than for a
+transfer that stops early, which resumes where it stopped. Delete that file to
+try them all again. Matches OpenDota has no data for are only reported, never
+recorded, since asking again costs nothing and OpenDota fills them in late.
