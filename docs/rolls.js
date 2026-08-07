@@ -112,28 +112,41 @@ function increaseOutcomes(base, top) {
   });
 }
 
-// Assumed: three distinct emblems, two up and one down, uniform over the
-// combinations that respect the top and bottom of the ladder.
+// Assumed: two distinct emblems go up and a third comes down, drawn only from
+// the ones that can actually move. Whichever half cannot happen simply does not
+// — with every emblem at the bottom of the ladder there is nothing to take away,
+// so the operation is a pure gain.
 function redistributeOutcomes(base, top) {
-  var n = base.length;
-  var combos = [];
-  for (var d = 0; d < n; d++) {
-    if (base[d].quality <= 0) continue;
-    for (var a = 0; a < n; a++) {
-      for (var b = a + 1; b < n; b++) {
-        if (a === d || b === d) continue;
-        if (base[a].quality >= top || base[b].quality >= top) continue;
-        combos.push([a, b, d]);
-      }
+  var up = [];
+  var down = [];
+  base.forEach(function (slot, i) {
+    if (slot.quality < top) up.push(i);
+    if (slot.quality > 0) down.push(i);
+  });
+
+  var raises = [];
+  if (up.length >= 2) {
+    for (var a = 0; a < up.length; a++) {
+      for (var b = a + 1; b < up.length; b++) raises.push([up[a], up[b]]);
     }
+  } else {
+    raises.push(up.slice());
   }
-  if (combos.length === 0) return [{ slots: cloneSlots(base), probability: 1 }];
+
+  var combos = [];
+  raises.forEach(function (pair) {
+    var choices = down.filter(function (i) { return pair.indexOf(i) < 0; });
+    if (choices.length === 0) {
+      combos.push({ raise: pair, lower: -1 });
+    } else {
+      choices.forEach(function (d) { combos.push({ raise: pair, lower: d }); });
+    }
+  });
 
   return combos.map(function (c) {
     var slots = cloneSlots(base);
-    slots[c[0]].quality += 1;
-    slots[c[1]].quality += 1;
-    slots[c[2]].quality -= 1;
+    c.raise.forEach(function (i) { slots[i].quality += 1; });
+    if (c.lower >= 0) slots[c.lower].quality -= 1;
     return { slots: slots, probability: 1 / combos.length };
   });
 }
@@ -215,42 +228,11 @@ function evaluateAll(data, unitsByRole, banner) {
   return rows;
 }
 
-// What a fresh set of three offers is worth, if you would take the best of them
-// and only when it gains. Exact over all C(n,3) sets: with the operations sorted
-// by value, the set's best is the k-th exactly when k is drawn and the other two
-// come from below it.
-function refreshValue(rows, operationCount) {
-  var best = {};
-  rows.forEach(function (r) {
-    if (best[r.index] === undefined || r.result.expected > best[r.index]) {
-      best[r.index] = r.result.expected;
-    }
-  });
-
-  var values = [];
-  for (var i = 0; i < operationCount; i++) {
-    values.push(best[i] === undefined ? 0 : best[i]);
-  }
-  values.sort(function (a, b) { return b - a; });
-
-  var n = values.length;
-  if (n < 3) return 0;
-  var total = (n * (n - 1) * (n - 2)) / 6;
-  var expected = 0;
-  for (var k = 0; k < n - 2; k++) {
-    var below = n - 1 - k;
-    var ways = (below * (below - 1)) / 2;
-    expected += Math.max(0, values[k]) * (ways / total);
-  }
-  return expected;
-}
-
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     targetGroups: targetGroups,
     outcomesFor: outcomesFor,
     evaluate: evaluate,
-    evaluateAll: evaluateAll,
-    refreshValue: refreshValue
+    evaluateAll: evaluateAll
   };
 }

@@ -6,8 +6,8 @@ library(jsonlite)
 
 # How many series a team plays in a period, and which of those to lead with
 period_series <- list(
-  `1` = list(n_values = c(4L, 5L, 6L), n_median = 6L),
-  `2` = list(n_values = c(2L, 3L, 4L, 5L, 6L), n_median = 4L)
+  `1` = list(name = "Group Stage", n_values = c(4L, 5L, 6L), n_median = 6L),
+  `2` = list(name = "Playoffs", n_values = c(2L, 3L, 4L, 5L, 6L), n_median = 4L)
 )
 
 # The share of Bo3s that go the distance, weighted like every other statistic so
@@ -131,10 +131,14 @@ export_web_data <- function(match_data,
     meta = list(
       generated = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
       period = period,
+      patch = starting_patch,
+      matches = n_distinct(match_data$match_id),
       p3 = calc_series_rate(match_data),
       alpha = weight_alpha,
       n_values = period_series[[as.character(period)]]$n_values,
       n_median = period_series[[as.character(period)]]$n_median,
+      # Both, so the methodology can name what each period costs a team
+      periods = period_series,
       role_games = length(unlist(map(units, "w"))),
       dropped_indicators = dropped
     ),

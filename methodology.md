@@ -334,7 +334,7 @@ reroll across three same-colour slots at 71 possibilities:
 | Traits uniform over the other four | No stated rule |
 | Offered operations uniform over the twenty | No stated rule |
 | "Increase one Quality": uniform over emblems below the top tier, raise one | Behaviour at the cap is unstated |
-| "Increase two and reduce one": three distinct emblems, uniform over combinations respecting both caps | Behaviour at the caps is unstated |
+| "Increase two and reduce one": three distinct emblems drawn only from those that can move in that direction; whichever half cannot happen does not | Behaviour at the caps is unstated. This makes the operation a guaranteed gain when every emblem sits at the bottom, since there is nothing to take away, and a guaranteed loss when every emblem is at the top. The game may instead withhold the operation entirely in the second case |
 
 **The objective.** A banner is worth the mean, across the role's 16 teams, of the
 same nested-maxima expectation the calculator uses. Nothing is averaged inside a
@@ -351,12 +351,28 @@ the crown for some Core banner and 13 of 16 for some Mid banner.
 Rolls are ranked **across all three banners at once**, since tokens are shared and
 the roster total is the sum of the three role scores.
 
-**Refresh value.** The expected best delta over a uniformly random set of three
-distinct operations, taking each one's best banner and treating a set with no
-gain as worth zero. Exact over all 1,140 three-subsets. It sets how much loss is
-worth accepting to cycle the offers. The recommendation is **one step ahead**: a
-full dynamic program over the token budget is not attempted, and the state space
-of banner configurations is why.
+**Two ways to spend a token**, and they settle the recommendation entirely. Using
+an option applies its effect *and* replaces all three options; a plain reroll
+replaces all three and leaves the banners alone. Both cost one token and both
+refresh, so the refresh cancels out of the comparison — the only difference is
+whether the operation's effect comes with it. A gaining option therefore strictly
+beats a plain reroll, and a losing one is strictly beaten by it. **Never take an
+option with a negative expectation.**
+
+Rerolling therefore sits in the table as a fourth row whose change is exactly
+**zero**, and an option is worth taking only if it beats zero. Nothing
+probabilistic is needed to make that comparison.
+
+**When to stop.** Rerolling is worth a token only while some operation still
+gains on some banner; if none does, a new set cannot hold one either. That is a
+fact about the current banners rather than an expectation, and it replaces an
+earlier "refresh value" — the average best of three random options — which was
+removed. That figure could not be collected with the token being spent, since
+taking the best of the new set costs another one, and it never entered the
+recommendation.
+
+The recommendation is **one step ahead**: a full dynamic program over the token
+budget is not attempted, and the state space of banner configurations is why.
 
 **Ground truth.** The multiplier model reproduces all nine emblems of a live
 banner exactly, totals and trait percentages alike — 230/100/210, 130/110/160,

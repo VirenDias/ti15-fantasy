@@ -3,66 +3,84 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TI15 Fantasy Calculator</title>
+<title>Hawkie's TI15 Fantasy Helper</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <header>
-  <h1>TI15 Fantasy Calculator</h1>
-  <p id="meta" class="meta">Loading&hellip;</p>
+  <div>
+    <h1>Hawkie's TI15 Fantasy Helper</h1>
+    <p id="meta" class="meta">Loading&hellip;</p>
+  </div>
+  <a class="button" href="https://github.com/VirenDias/ti15-fantasy">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0
+      3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
+      0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01
+      1.08.58 1.23.82.72 1.21 1.87.87
+      2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95
+      0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18
+      1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16
+      1.92.08 2.12.51.56.82 1.27.82 2.15 0
+      3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0
+      .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+    GitHub
+  </a>
 </header>
 
 <main>
   <section id="banner-section">
-    <h2>Your War Banners</h2>
-    <p class="note">
-      Set each slot to the emblem you rolled &mdash; its stat, quality and trait.
-      The multiplier is worked out for you, including what neighbouring emblems
-      do to it, so you can check it against the game.
-    </p>
+    <h2>Set your War Banners</h2>
     <div id="banner" class="roles"></div>
   </section>
 
+  <div class="tabbed">
   <nav class="tabs">
-    <button type="button" class="tab" data-panel="reroll">Reroll</button>
-    <button type="button" class="tab" data-panel="rosters">Rosters</button>
+    <button type="button" class="tab" data-panel="reroll">War Banner Optimiser</button>
+    <button type="button" class="tab" data-panel="rosters">Roster &amp; Titles Optimiser</button>
     <button type="button" class="tab" data-panel="methodology">Methodology</button>
+    <button type="button" class="tab" data-panel="data">Compiled Data</button>
   </nav>
 
   <section id="panel-reroll">
-    <h2>Which roll to take</h2>
-    <p class="note">
-      Pick the three you have been offered. A roll costs a token, applies to one
-      banner, and can leave you worse off &mdash; so the answer is sometimes none
-      of them.
-    </p>
-    <div id="offers" class="offers"></div>
-    <p id="advice" class="advice"></p>
+    <h2>Set your roll options</h2>
+    <div id="options" class="offers"></div>
 
-    <h2>Every roll, ranked</h2>
-    <p class="note" id="roll-note"></p>
+    <h2>Pick an operation</h2>
+
+    <div id="advice" class="advice">
+      <span class="advice-label">Recommendation</span>
+      <p class="advice-text"></p>
+    </div>
+
+    <h3 id="roll-title">Operation outcome summary</h3>
     <div class="table-wrap short">
       <table>
         <thead><tr id="roll-head"></tr></thead>
         <tbody id="roll-body"></tbody>
       </table>
     </div>
+    <p class="note" id="roll-note"></p>
     <div id="detail"></div>
   </section>
 
   <section id="panel-rosters" hidden>
-    <h2>Pick a roster</h2>
-    <p class="note">
-      Every row is one team per role, with the prefix and suffix that score
-      highest for that combination. Higher is better. Click a column heading to
-      reorder, and scroll for the rest.
-    </p>
+    <h2>Pick a roster and titles</h2>
+
+    <div id="roster-advice" class="advice">
+      <span class="advice-label">Recommendation</span>
+      <p class="advice-text"></p>
+    </div>
+
+    <h3 id="roster-title">Best roster-title combinations</h3>
 
     <div class="controls">
-      <p class="note assume" id="assume"></p>
+      <p class="note assume">
+        Expected points are for the median number of series played in the period.
+      </p>
       <label class="check">
-        <input type="checkbox" id="show-n"> Break out every possible run
+        <input type="checkbox" id="show-n">
+        Show expected points for every possible number of series
       </label>
     </div>
 
@@ -72,80 +90,80 @@
         <tbody id="body"></tbody>
       </table>
     </div>
-    <p class="note" id="status"></p>
   </section>
 
   <section id="panel-methodology" hidden>
-    <h2>How a number is worked out</h2>
+    <h2>Data</h2>
     <ul>
-      <li>A role scores the average of its players, and only for the stats on
+      <li>The data is taken from <span id="m-matches"></span> professional
+        matches played on patch <span id="m-patch"></span> or later, covering all
+        16 teams at the tournament.</li>
+      <li>The data comes from both OpenDota and the match replays themselves,
+        read using a custom parser built for this.</li>
+      <li>Matches are exponentially weighted, so recent ones count for more.</li>
+      <li>Coverage is uneven, between <span id="m-min"></span> and
+        <span id="m-max"></span> matches for a given team and role.</li>
+      <li id="m-missing">The data needed for
+        <strong><span id="m-dropped"></span></strong> is not available yet. We are
+        working on acquiring it.</li>
+    </ul>
+
+    <h2>Assumptions</h2>
+    <ul>
+      <li><strong>How far a team goes is not predicted.</strong> A team plays
+        <span id="m-series"></span>, and the tables assume the median of each
+        &mdash; <span id="m-assumed"></span> series respectively.</li>
+      <li>The grand final is a Bo5 but is modelled as a Bo3. Only the best two
+        matches of a series count either way, and it is a single series, so the
+        difference is minimal.</li>
+      <li><strong>Reroll odds are not published.</strong> Valve states only that
+        Emblem Quality is weighted against the higher tiers, so the odds are
+        assumed to fall off in inverse proportion to the boost &mdash;
+        <span id="m-weights"></span> for tiers I to V. Emblem Traits and Stats,
+        and which three roll operations are offered, are taken as equally
+        likely.</li>
+    </ul>
+
+    <h2>Calculation</h2>
+    <ul>
+      <li>A role scores the average of its players, counting only the stats on
         their banner. The best two matches of a series count, then the best
-        series of the period &mdash; two maxima, so consistency is worth less
-        than a high ceiling.</li>
-      <li>Expected points come from a team-role's own matches: draw the two or
-        three games of a series, keep the best two, repeat for as many series as
-        they play, and take the best.</li>
-      <li>Both maxima are worked out exactly rather than simulated, so the same
-        banner always gives the same answer.</li>
-      <li>Recent matches count for more, tapering off smoothly rather than at a
-        cut-off.</li>
-      <li>The prefix and suffix are applied to each player in each match before
-        any of that, because which matches they land in is what decides their
-        worth.</li>
+        series of the period &mdash; two maxima in sequence, which rewards a high
+        ceiling over consistency.</li>
+      <li>The result is therefore not a mean but the expected value of that
+        maximum. Every pair of games a series can produce, and every
+        best-of-several a period can produce, is enumerated and weighted by its
+        probability. A series runs two or three games in the proportion observed
+        in the data, where <span id="m-p3"></span> of Bo3s go to three. Nothing
+        is simulated.</li>
+      <li>Prefixes and suffixes are applied to each player in each match, before
+        either maximum is taken, because which matches they fall in determines
+        their value. They can be changed freely, so roll evaluation excludes
+        them.</li>
+      <li>Since the team is chosen later, a banner is valued as the mean of what
+        it is worth to each of the 16 teams in that role. Valuing it against only
+        the strongest team was tested and made very little difference to which
+        rolls come out ahead, so the simpler measure is used.</li>
+      <li>Taking an option and rerolling both cost one token and both replace all
+        three options, so the only difference between them is whether the
+        operation is applied. A reroll therefore carries an expected change of
+        zero, and an option is worth taking only if it exceeds zero. Where no
+        operation gains on any banner, a new set of options cannot contain one
+        either.</li>
+      <li>Every outcome of an operation is enumerated and weighted by its
+        probability, and a reroll cannot return the value an emblem already
+        holds. The expected change is the deciding figure: an option with a
+        positive expectation may still be more likely to lower a banner than to
+        raise it, where the gain in its rare favourable outcomes is large
+        enough.</li>
     </ul>
-
-    <h2>How a roll is judged</h2>
-    <ul>
-      <li>Every outcome of a roll is listed and weighted by its chance, so the
-        expected change is exact rather than sampled. Click any row of the table
-        to see all of them.</li>
-      <li>A banner is scored against every team and averaged, since you have not
-        picked one yet. Judged against the single best team instead, the ranking
-        of rolls barely moves.</li>
-      <li>Rolls are compared across all three banners at once, because tokens are
-        shared and a point is a point wherever it lands.</li>
-      <li><strong>Expected decides.</strong> A roll worth taking can still be more
-        likely than not to hurt, if its rare good outcome is large enough.</li>
-      <li>Titles are free to change, so they are left out here and chosen on the
-        Rosters tab instead.</li>
-    </ul>
-
-    <h2>The data</h2>
-    <ul>
-      <li><span id="m-games"></span> role-games from patch 7.41 onwards, across
-        16 teams and three roles.</li>
-      <li>A role-game counts only where a team's role-mates played the same match
-        on the same side, so a stand-in game is left out.</li>
-      <li>Evidence is uneven &mdash; from <span id="m-min"></span> to
-        <span id="m-max"></span> matches per team and role. A best-of-several
-        figure flatters the thin ones.</li>
-      <li><span id="m-p3"></span> of Bo3s go to three games, measured from the
-        same matches rather than assumed.</li>
-    </ul>
-
-    <h2>What is assumed</h2>
-    <ul>
-      <li><strong>Reroll odds are not published.</strong> Traits and offers are
-        taken as uniform. Quality is assumed to fall off inversely with its boost
-        &mdash; <span id="m-weights"></span> for tiers I to V &mdash; which is
-        monotone as the game states. A reroll cannot return the current tier.</li>
-      <li>The grand final is treated as a Bo3.</li>
-      <li>Series are drawn independently, so a team on a run of form is not
-        modelled.</li>
-      <li><strong>the Clutch is overstated.</strong> It fires on 29.6% of matches
-        here against roughly 17% in an all-Bo3 tournament, because a Bo1 match
-        trivially counts as the last possible one. Discount it.</li>
-      <li><strong>the Cruel cannot be priced</strong> and is left out &mdash; it
-        needs a fountain-death count the replay parser does not yet produce.</li>
-      <li>How far a team goes is not predicted. That is the one input left to
-        you.</li>
-    </ul>
-
-    <p class="note">
-      The full record, with the measurements behind each decision, is in
-      <code>methodology.md</code> in the repository.
-    </p>
   </section>
+
+  <section id="panel-data" hidden>
+    <h2>Compiled Data</h2>
+    <p class="note">Not published yet.</p>
+  </section>
+  </div>
 </main>
 
 <script src="calc.js"></script>
