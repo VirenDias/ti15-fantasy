@@ -1,0 +1,21 @@
+roll_name,emblem_colour,roll_property,roll_scope
+Reroll Stat for Red Emblems,Red,stat,all
+Reroll Quality for Red Emblems,Red,quality,all
+Reroll Quality for the first Red Emblem,Red,quality,first
+Reroll Quality for the last Red Emblem,Red,quality,last
+Reroll Quality for one random Red Emblem,Red,quality,random
+Reroll Trait for Red Emblems,Red,trait,all
+Reroll Stat for Blue Emblems,Blue,stat,all
+Reroll Quality for Blue Emblems,Blue,quality,all
+Reroll Trait for Blue Emblems,Blue,trait,all
+Reroll Trait for the first Blue Emblem,Blue,trait,first
+Reroll Trait for the last Blue Emblem,Blue,trait,last
+Reroll Trait for one random Blue Emblem,Blue,trait,random
+Reroll Stat for Green Emblems,Green,stat,all
+Reroll Stat for the first Green Emblem,Green,stat,first
+Reroll Stat for the last Green Emblem,Green,stat,last
+Reroll Stat for one random Green Emblem,Green,stat,random
+Reroll Quality for Green Emblems,Green,quality,all
+Reroll Trait for Green Emblems,Green,trait,all
+Randomly increase one Quality,,increase,one
+Randomly increase two Qualities and reduce one,,redistribute,two

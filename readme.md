@@ -17,6 +17,9 @@
    * `data/prefixes.csv`
    * `data/suffixes.csv`
    * `data/banners.csv` (with the emblem colours and order of each War Banner)
+   * `data/qualities.csv` (the quality ladder, in order, with reroll weights)
+   * `data/traits.csv` (each trait's own bonus and what it does to its neighbours)
+   * `data/rolls.csv` (every roll operation the game can offer)
 
 3. **Update as the tournament progresses:**
 
@@ -40,6 +43,9 @@ Two things to know when supplying the data above:
 * Each prefix and suffix needs a matching condition in `src/compile-match-data.R`.
   Renaming or adding one without that fails the run rather than silently
   producing an empty column. `the Cruel` is currently unimplemented.
+* Each trait needs one in `docs/calc.js` for the same reason, since only the
+  numbers live in `data/traits.csv` and the conditions cannot. Row order in
+  `data/qualities.csv` is the ladder emblems improve along, so it matters.
 
 # Updating the Replay Parser
 
@@ -78,8 +84,8 @@ recorded, since asking again costs nothing and OpenDota fills them in late.
 
 # The Calculator
 
-`docs/` is a static page that ranks every roster of three teams, one per role,
-against every prefix and suffix pair. Serve it and open it:
+`docs/` is a static page with two tools over one shared War Banner. Serve it and
+open it:
 
 ```
 python -m http.server 8000 --directory docs
@@ -88,9 +94,20 @@ python -m http.server 8000 --directory docs
 `file://` does not work, because the browser blocks `fetch` on it. To publish,
 commit `docs/` and enable GitHub Pages with source `main` and folder `/docs`.
 
-Set each banner slot to the emblem you rolled and its total multiplier, quality
-plus trait, as the game shows it. Everything recalculates from `data.json` in the
-page, so rerolls can be tried without rerunning R.
+Set each banner slot to the emblem you rolled — its stat, quality and trait. The
+multiplier is derived, including what neighbouring emblems do to it, and shown so
+it can be checked against the game. Everything recalculates in the page from
+`data.json`, so nothing needs rerunning in R.
+
+**Reroll** ranks every roll operation the game can offer, against every banner,
+by the expected change in points. Rolls are compared across all three banners
+because tokens are shared and a point is a point wherever it lands. Mark the three
+you were offered and it names the one to take, or says to take none. Every row
+opens to show all of its outcomes with their odds, so the numbers can be checked
+by hand.
+
+**Rosters** ranks every combination of one team per role, with the prefix and
+suffix that score best for it.
 
 A score is the best two matches of a series, then the best series of the period,
 per role. Both maxima are evaluated exactly rather than sampled: a series score

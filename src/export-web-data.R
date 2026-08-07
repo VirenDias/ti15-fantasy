@@ -65,6 +65,9 @@ export_web_data <- function(match_data,
                             banners,
                             prefixes,
                             suffixes,
+                            qualities,
+                            traits,
+                            rolls,
                             period = current_period,
                             path = file.path(web_dir, "data.json")) {
   stat_cols <- stats$stat_column
@@ -153,6 +156,24 @@ export_web_data <- function(match_data,
       teams %>% filter(team_id %in% map_dbl(units, "team")) %>%
         select(id = team_id, name = team_name, tag = team_tag),
       ~ list(id = ..1, name = ..2, tag = ..3)
+    ),
+    # The reroll helper reads these rather than holding any of it as a literal.
+    # Row order in qualities is the ladder an emblem improves along.
+    qualities = pmap(
+      qualities %>% select(name = quality_name, bonus = quality_bonus,
+                           weight = quality_weight),
+      ~ list(name = ..1, bonus = ..2, weight = ..3)
+    ),
+    traits = pmap(
+      traits %>% select(name = trait_name, desc = trait_desc,
+                        bonus = trait_bonus, adjacent = trait_adjacent),
+      ~ list(name = ..1, desc = ..2, bonus = ..3, adjacent = ..4)
+    ),
+    rolls = pmap(
+      rolls %>% select(name = roll_name, colour = emblem_colour,
+                       property = roll_property, scope = roll_scope),
+      ~ list(name = ..1, colour = if (is.na(..2)) NULL else ..2,
+             property = ..3, scope = ..4)
     ),
     units = units
   )

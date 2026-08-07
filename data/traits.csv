@@ -1,0 +1,6 @@
+trait_name,trait_desc,trait_bonus,trait_adjacent
+Fractal,+60% to the stat bonus if all emblem qualities on the War Banner are different,60,0
+Benevolent,Provides a 20% bonus to the stat value of adjacent emblems,0,20
+Vampiric,"Increases the stat value of this emblem by 50%, but lowers the stat value of adjacent emblems by 10%",50,-10
+Unique,+30% to the stat bonus if this is the only Unique emblem on the War Banner,30,0
+Friendly,+50% to the stat bonus if there are at least 3 Friendly emblems on the War Banner,50,0

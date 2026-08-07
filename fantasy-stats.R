@@ -18,6 +18,9 @@ stats <- read_csv("data/stats.csv", show_col_types = FALSE)
 prefixes <- read_csv("data/prefixes.csv", show_col_types = FALSE)
 suffixes <- read_csv("data/suffixes.csv", show_col_types = FALSE)
 banners <- read_csv("data/banners.csv", show_col_types = FALSE)
+qualities <- read_csv("data/qualities.csv", show_col_types = FALSE)
+traits <- read_csv("data/traits.csv", show_col_types = FALSE)
+rolls <- read_csv("data/rolls.csv", show_col_types = FALSE)
 
 # Nothing here consumes the banners, but a typo would only surface much later
 banners <- banners %>% arrange(period, player_role, position)
@@ -43,7 +46,20 @@ stopifnot(
     pull(ok) %>%
     all(),
   # The configured period must be one the file describes
-  current_period %in% banners$period
+  current_period %in% banners$period,
+  # Quality is a ladder, so the file order is the order emblems improve in
+  nrow(qualities) >= 2,
+  !any(duplicated(qualities$quality_name)),
+  all(qualities$quality_bonus > 0),
+  all(qualities$quality_weight > 0),
+  # The calculator holds a condition for each trait by name, so a rename here
+  # has to be matched there rather than silently doing nothing
+  !any(duplicated(traits$trait_name)),
+  # A roll either targets one colour or, for the two that do not, none
+  all(is.na(rolls$emblem_colour) | rolls$emblem_colour %in% stats$emblem_colour),
+  all(rolls$roll_property %in% c("stat", "quality", "trait", "increase", "redistribute")),
+  all(rolls$roll_scope %in% c("all", "first", "last", "random", "one", "two")),
+  !any(duplicated(rolls$roll_name))
 )
 
 # So a stale period in config.R is visible on every run
@@ -140,7 +156,10 @@ export_web_data(
   stats = stats,
   banners = banners,
   prefixes = prefixes,
-  suffixes = suffixes
+  suffixes = suffixes,
+  qualities = qualities,
+  traits = traits,
+  rolls = rolls
 )
 
 message(

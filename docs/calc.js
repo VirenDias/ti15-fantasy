@@ -24,9 +24,13 @@ function baseScores(unit, slots) {
   return base;
 }
 
-// A role-game scores the sum of its players, each amplified by their own
-// triggers. Averaging the pair first would lose that, since the players in a
-// role rarely trigger the same prefix in the same match.
+// A role-game scores the average of its players, each amplified by their own
+// triggers. The amplification has to be applied per player before averaging,
+// since the two rarely trigger the same prefix in the same match.
+//
+// Averaging before the game is picked is what makes a role's two players want
+// to peak together: two good games and one bad beats three games where one
+// player is good and the other is not.
 function amplify(unit, base, prefix, suffix) {
   var games = unit.w.length;
   var size = unit.size;
@@ -46,7 +50,7 @@ function amplify(unit, base, prefix, suffix) {
       if (sBit && (flags & sBit) !== 0) amp += sBonus;
       total += base[r] * amp;
     }
-    y[g] = total;
+    y[g] = total / size;
   }
   return y;
 }
@@ -137,6 +141,75 @@ function expectedMax(hist, nValues) {
   return out;
 }
 
+// Every bonus comes from qualities.csv and traits.csv. Only the conditions live
+// here, because they are structural rather than numeric — the same split as
+// prefixes.csv and its conditions in src/compile-match-data.R.
+var TRAIT_CONDITION = {
+  Fractal: function (banner) { return banner.allQualitiesDiffer; },
+  Benevolent: function () { return false; },   // gives nothing to itself
+  Vampiric: function () { return true; },      // unconditional
+  Unique: function (banner) { return banner.uniques === 1; },
+  Friendly: function (banner) { return banner.friendlies >= 3; }
+};
+
+// A rename in traits.csv has to be matched by a condition here, so it fails on
+// load rather than silently scoring the trait as worthless
+function assertTraitsKnown(data) {
+  var want = Object.keys(TRAIT_CONDITION).slice().sort().join(", ");
+  var got = data.traits.map(function (t) { return t.name; }).slice().sort().join(", ");
+  if (want !== got) {
+    throw new Error("traits.csv holds [" + got + "] but calc.js has conditions for [" +
+                    want + "]");
+  }
+}
+
+// Per slot: the quality bonus, the net trait contribution including what the
+// neighbours do to it, and the total multiplier. The net trait figure is the
+// percentage the game prints on the emblem, so it can be checked by eye.
+function multipliers(slots, data) {
+  var n = slots.length;
+  var names = slots.map(function (s) { return data.traits[s.trait].name; });
+  var context = {
+    allQualitiesDiffer: new Set(slots.map(function (s) { return s.quality; })).size === n,
+    uniques: names.filter(function (x) { return x === "Unique"; }).length,
+    friendlies: names.filter(function (x) { return x === "Friendly"; }).length
+  };
+
+  var out = new Array(n);
+  for (var i = 0; i < n; i++) {
+    var quality = data.qualities[slots[i].quality].bonus / 100;
+    var own = data.traits[slots[i].trait];
+    var trait = TRAIT_CONDITION[own.name](context) ? own.bonus / 100 : 0;
+
+    // Adjacency is linear, so only i-1 and i+1
+    if (i > 0) trait += data.traits[slots[i - 1].trait].adjacent / 100;
+    if (i < n - 1) trait += data.traits[slots[i + 1].trait].adjacent / 100;
+
+    out[i] = { quality: quality, trait: trait, total: 1 + quality + trait };
+  }
+  return out;
+}
+
+// What one role's banner is worth: the mean across that role's teams of the
+// calculator's own expectation. Nothing is averaged inside a team — each term is
+// already the full nested-maxima value. The mean only stands in for a team
+// choice that has not been made yet.
+function bannerValue(units, slots, data) {
+  var mult = multipliers(slots, data);
+  var resolved = slots.map(function (s, i) {
+    return { stat: s.stat, mult: mult[i].total };
+  });
+  var n = [data.meta.n_median];
+
+  var total = 0;
+  for (var u = 0; u < units.length; u++) {
+    var base = baseScores(units[u], resolved);
+    var y = amplify(units[u], base, null, null);
+    total += expectedMax(seriesHistogram(y, units[u].w, data.meta.p3), n)[0];
+  }
+  return total / units.length;
+}
+
 function pairList(data) {
   var pairs = [];
   for (var p = 0; p < data.prefixes.length; p++) {
@@ -173,6 +246,10 @@ if (typeof module !== "undefined" && module.exports) {
     seriesHistogram: seriesHistogram,
     expectedMax: expectedMax,
     pairList: pairList,
-    computeAll: computeAll
+    computeAll: computeAll,
+    multipliers: multipliers,
+    bannerValue: bannerValue,
+    assertTraitsKnown: assertTraitsKnown,
+    TRAIT_CONDITION: TRAIT_CONDITION
   };
 }

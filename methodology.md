@@ -28,25 +28,47 @@ Points are the best 2 matches of a series, then the best series of the period,
 **per role**. Two nested maxima, so variance is rewarded and order statistics
 apply rather than means.
 
-A match scores
+A player scores, in one match,
 
 ```
 sum over emblems of (stat points x emblem multiplier)  x  (1 + prefix + suffix)
 ```
 
+and **a role scores the average of its players**, per the in-game glossary. The
+average is taken before the game is selected, which is what makes a role's two
+players want to peak together: two strong games and one weak beats three games
+in which one player is good and the other is not.
+
 **The emblem multiplier is per emblem, not per banner** — one banner routinely
 carries GPM at 230% next to Roshan Kills at 100%, so a single multiplier cannot
-be applied to a summed base score. It is `1 + quality + trait`, verified
-arithmetically against all nine emblems of a live banner. Quality tiers are
-fixed at **I = +10%, II = +30%, III = +60%**. Trait values are not fixed per
-trait name — see section 9.
+be applied to a summed base score. It is `1 + quality + trait`.
 
-The prefix and suffix are one global choice across all five players and are
-additive. Both must be applied **per player per match, before the maxima**:
-per match because trigger rates are match-specific, and per player because a
-role's two players rarely trigger the same prefix in the same match, so
-averaging the pair first loses the interaction. `src/export-web-data.R` ships
-unaggregated player rows for exactly this reason.
+Quality has five tiers: **I +10%, II +30%, III +60%, IV +100%, V +150%**.
+
+Traits are conditional, and two of them act on their **linear neighbours**:
+
+| Trait | Effect |
+|---|---|
+| Fractal | +60% if every quality on the banner differs |
+| Benevolent | +20% to adjacent emblems, nothing to itself |
+| Vampiric | +50% to itself, -10% to adjacent |
+| Unique | +30% if it is the only Unique on the banner |
+| Friendly | +50% if at least 3 Friendly are on the banner |
+
+The percentage the game displays on an emblem is the **net** trait contribution
+including its neighbours' effects. That reconciles every figure on a live
+banner: a Vampiric GPM showing +70% is its own +50% plus +20% from an adjacent
+Benevolent; that Benevolent shows -10% because it gives itself nothing and sits
+beside the Vampiric; a Fractal showing +80% is +60% for distinct qualities plus
++20% from an adjacent Benevolent. Two Uniques on one banner both show 0%.
+
+The prefix and suffix are one global choice across all five players, additive,
+and freely changeable without spending tokens. Both must be applied **per player
+per match, before the maxima**: per match because trigger rates are
+match-specific, and per player because a role's two players rarely trigger the
+same prefix in the same match, so averaging the pair first loses the
+interaction. `src/export-web-data.R` ships unaggregated player rows for exactly
+this reason, and the browser averages only after amplifying.
 
 Consequence: the three role slots optimise independently, but the shared
 prefix/suffix couples them, giving a 56-pair outer loop (8 prefixes x 7 usable
@@ -276,13 +298,72 @@ suffix column.
   selected. Ranking suffixes by rate x bonus is therefore wrong — only the
   calculation settles it. The same logic cuts the other way for `the Clutch`,
   whose games score above average.
-- **Trait values are not fixed per trait name.** `UNIQUE` was observed at +50%,
-  +30%, 0% and 0% and `BENEVOLENT` at -10% and 0% within a single banner, so
-  some condition governs them that has not been identified. This does not affect
-  the calculator, which reads the resolved multiplier off the banner, but it
-  blocks advising which rerolls to spend tokens on.
+- **Reroll probabilities are not published.** Traits and offered roll options are
+  assumed uniform. Quality is assumed to fall off inversely with its boost —
+  60 / 20 / 10 / 6 / 4 percent for tiers I to V — which is monotone as the game
+  states and gives every tier the same expected contribution of 6 points. A
+  reroll cannot return the current tier, so the remaining four renormalise. The
+  live banner cannot validate this, since its emblems have already been rerolled.
 
-## 11. Data quality
+## 11. The reroll model
+
+Twenty roll operations, in `data/rolls.csv`. Each colour has one granular category
+with all / first / last / random variants and all-only for the other two — Red is
+granular on quality, Blue on trait, Green on stat — plus two colourless ones that
+move quality around. Three are offered at a time, each costs a token, and using
+one replaces all three. A roll applies to whichever banner is selected, so the
+decision is really (operation x banner).
+
+Outcomes are **enumerated exactly**, never sampled. The largest case is a stat
+reroll across three same-colour slots at 71 possibilities:
+
+- **Stat** — a joint draw, not independent ones. A banner cannot hold a stat
+  twice, so the new stats must differ from each other, from every same-colour slot
+  left untouched, and from their own current value. Uniform over valid
+  assignments. Injections with inclusion-exclusion give 21 for two slots, 71 for
+  three.
+- **Quality / trait** — independent per slot, current value excluded, remaining
+  weights renormalised.
+- **random** — a `1/k` mixture over which slot of that colour is hit.
+
+**Assumed, because the game does not publish it:**
+
+| Assumption | Basis |
+|---|---|
+| Quality weights 60 / 20 / 10 / 6 / 4 for tiers I to V | Inversely proportional to the boost, the only rule the game states. Monotone as required, and gives every tier the same expected contribution of 6 points. A reroll cannot return the current tier |
+| Traits uniform over the other four | No stated rule |
+| Offered operations uniform over the twenty | No stated rule |
+| "Increase one Quality": uniform over emblems below the top tier, raise one | Behaviour at the cap is unstated |
+| "Increase two and reduce one": three distinct emblems, uniform over combinations respecting both caps | Behaviour at the caps is unstated |
+
+**The objective.** A banner is worth the mean, across the role's 16 teams, of the
+same nested-maxima expectation the calculator uses. Nothing is averaged inside a
+team — each term is already a full `E[max]`. The across-teams mean only stands in
+for a team choice not yet made, and prefix and suffix are left out because they
+are free to change later.
+
+Measured against the alternative of optimising for whichever team is best, the
+across-teams mean ranks banners at **rho 0.994 (Core), 0.981 (Mid), 0.938
+(Support)** over 200 random banners — so the more elaborate option buys nothing.
+It is also steadier: the best team changes with the banner, with 11 of 16 taking
+the crown for some Core banner and 13 of 16 for some Mid banner.
+
+Rolls are ranked **across all three banners at once**, since tokens are shared and
+the roster total is the sum of the three role scores.
+
+**Refresh value.** The expected best delta over a uniformly random set of three
+distinct operations, taking each one's best banner and treating a set with no
+gain as worth zero. Exact over all 1,140 three-subsets. It sets how much loss is
+worth accepting to cycle the offers. The recommendation is **one step ahead**: a
+full dynamic program over the token budget is not attempted, and the state space
+of banner configurations is why.
+
+**Ground truth.** The multiplier model reproduces all nine emblems of a live
+banner exactly, totals and trait percentages alike — 230/100/210, 130/110/160,
+140/240/130. That is the only check against something other than our own
+arithmetic, and it is a hard assertion in the test suite.
+
+## 12. Data quality
 
 `fantasy.jar` validated against OpenDota over 400 player-matches on patch 7.41:
 
