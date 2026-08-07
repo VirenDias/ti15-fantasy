@@ -62,6 +62,8 @@ downloading and parsing every replay, and writes:
   emblem stat scored and which prefixes and suffixes applied
 * `results/role_stats.csv` — recency-weighted average and standard deviation per
   team, role and metric, with the number of matches behind each figure
+* `docs/data.json` — the same matches as unaggregated role-games, for the
+  calculator
 
 A replay is downloaded once and kept only as its parsed csv, so a rerun resumes
 wherever the last one stopped. Matches whose replay cannot be downloaded or
@@ -73,3 +75,35 @@ left alone after a few runs, sooner for one Valve no longer serves than for a
 transfer that stops early, which resumes where it stopped. Delete that file to
 try them all again. Matches OpenDota has no data for are only reported, never
 recorded, since asking again costs nothing and OpenDota fills them in late.
+
+# The Calculator
+
+`docs/` is a static page that ranks every roster of three teams, one per role,
+against every prefix and suffix pair. Serve it and open it:
+
+```
+python -m http.server 8000 --directory docs
+```
+
+`file://` does not work, because the browser blocks `fetch` on it. To publish,
+commit `docs/` and enable GitHub Pages with source `main` and folder `/docs`.
+
+Set each banner slot to the emblem you rolled and its total multiplier, quality
+plus trait, as the game shows it. Everything recalculates from `data.json` in the
+page, so rerolls can be tried without rerunning R.
+
+A score is the best two matches of a series, then the best series of the period,
+per role. Both maxima are evaluated exactly rather than sampled: a series score
+is always the sum of two of a team's games, so every outcome is one of at most
+`n(n+1)/2` atoms with a closed-form probability. Games are drawn weighted by
+recency, which weights their stats and their prefix and suffix triggers together.
+
+There is one column per number of series a team might play, since that is the one
+input the tournament decides rather than the data. The best pair is chosen at the
+median and held across the others, because you commit to one title rather than
+one per scenario. Read `methodology.md` before trusting the suffix column —
+`the Clutch` is knowingly overstated there.
+
+An indicator with no data at all is dropped from the export on the evidence
+rather than by name, so `the Cruel` reappears on its own once the parser supplies
+it.

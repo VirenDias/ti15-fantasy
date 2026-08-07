@@ -5,6 +5,7 @@ source("src/get-match-data.R")
 source("src/get-hero-data.R")
 source("src/compile-match-data.R")
 source("src/summarise-matches.R")
+source("src/export-web-data.R")
 
 library(tidyverse)
 
@@ -132,6 +133,15 @@ role_stats <- summarise_metrics(
 
 if (!dir.exists("results")) dir.create("results")
 write_csv(x = role_stats, file = "results/role_stats.csv")
+
+export_web_data(
+  match_data = match_data,
+  teams = teams,
+  stats = stats,
+  banners = banners,
+  prefixes = prefixes,
+  suffixes = suffixes
+)
 
 message(
   paste0(
