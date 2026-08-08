@@ -47,6 +47,9 @@ stopifnot(
     all(),
   # The configured period must be one the file describes
   current_period %in% banners$period,
+  # A suffix either describes the match itself, and so travels with a resampled
+  # game, or describes where the match sits in its series, and so cannot
+  all(suffixes$suffix_scope %in% c("match", "series_position")),
   # Quality is a ladder, so the file order is the order emblems improve in
   nrow(qualities) >= 2,
   !any(duplicated(qualities$quality_name)),

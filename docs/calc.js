@@ -31,14 +31,42 @@ function baseScores(unit, slots) {
 // Averaging before the game is picked is what makes a role's two players want
 // to peak together: two good games and one bad beats three games where one
 // player is good and the other is not.
+// A suffix that describes the match itself travels with the game it was measured
+// on. One that describes the match's *position in its series* cannot, because
+// resampling is exactly what destroys the position — carrying the flag along
+// imports the source data's format mix instead of the tournament's. Those are
+// applied by where the draw puts the game, not by what it was flagged with.
+function isPositional(suffix) {
+  return !!suffix && suffix.scope === "series_position";
+}
+
+// What a positional suffix adds to a game if the draw puts it last. The bonus is
+// a property of the match, so both players of the role trigger it together, and
+// it lands additively alongside the prefix rather than multiplying the result.
+function positionalBoost(unit, base, suffix) {
+  if (!isPositional(suffix) || !suffix.bonus) return null;
+
+  var games = unit.w.length;
+  var size = unit.size;
+  var bonus = suffix.bonus / 100;
+  var boost = new Float64Array(games);
+  for (var g = 0; g < games; g++) {
+    var raw = 0;
+    for (var k = 0; k < size; k++) raw += base[g * size + k];
+    boost[g] = bonus * raw / size;
+  }
+  return boost;
+}
+
 function amplify(unit, base, prefix, suffix) {
   var games = unit.w.length;
   var size = unit.size;
   var y = new Float64Array(games);
+  var carried = isPositional(suffix) ? null : suffix;
   var pBit = prefix ? prefix.bit : 0;
-  var sBit = suffix ? suffix.bit : 0;
+  var sBit = carried ? carried.bit : 0;
   var pBonus = prefix ? prefix.bonus / 100 : 0;
-  var sBonus = suffix ? suffix.bonus / 100 : 0;
+  var sBonus = carried ? carried.bonus / 100 : 0;
 
   for (var g = 0; g < games; g++) {
     var total = 0;
@@ -65,7 +93,12 @@ function amplify(unit, base, prefix, suffix) {
 //   three games  P(i,j) = 3*wj*(wi^2 + 2*wi*W[i-1])      i<j    3*wj^2*W[j-1] + wj^3   i=j
 //
 // Both telescope to 1, which the tests assert.
-function seriesHistogram(y, w, p3) {
+//
+// `boost` carries a positional suffix. A Bo3 that runs to three games has a last
+// possible match and a two-game one does not, so the bonus lands on the third
+// draw only — which reproduces the tournament's rate, p3 / (2 + p3), by
+// construction rather than by filtering the pool.
+function seriesHistogram(y, w, p3, boost) {
   var n = y.length;
   var order = new Array(n);
   for (var i = 0; i < n; i++) order[i] = i;
@@ -87,11 +120,24 @@ function seriesHistogram(y, w, p3) {
     cum[i] = acc;
   }
 
+  // The bonused values are not sorted even though the plain ones are, since the
+  // boost varies from game to game
+  var yc = null;
+  var top = ys[n - 1];
+  if (boost) {
+    yc = new Float64Array(n);
+    for (i = 0; i < n; i++) {
+      yc[i] = ys[i] + boost[order[i]];
+      if (yc[i] > top) top = yc[i];
+    }
+  }
+
   var lo = 2 * ys[0];
-  var span = 2 * ys[n - 1] - lo || 1;
+  var span = ys[n - 1] + top - lo || 1;
   var binP = new Float64Array(BINS);
   var binV = new Float64Array(BINS);
   var p2 = 1 - p3;
+  var j, wj, wi, below, under;
 
   function add(value, prob) {
     var b = ((value - lo) / span * BINS) | 0;
@@ -101,18 +147,82 @@ function seriesHistogram(y, w, p3) {
     binV[b] += prob * value;
   }
 
-  for (var j = 0; j < n; j++) {
-    var wj = ws[j];
-    var below = j > 0 ? cum[j - 1] : 0;
-    add(2 * ys[j], p2 * wj * wj + p3 * (3 * wj * wj * below + wj * wj * wj));
+  // Two games: both count, and neither is the last possible match of the series
+  for (j = 0; j < n; j++) {
+    wj = ws[j];
+    add(2 * ys[j], p2 * wj * wj);
+    for (i = 0; i < j; i++) add(ys[i] + ys[j], p2 * 2 * ws[i] * wj);
+  }
 
-    for (i = 0; i < j; i++) {
-      var wi = ws[i];
-      var under = i > 0 ? cum[i - 1] : 0;
-      add(
-        ys[i] + ys[j],
-        p2 * 2 * wi * wj + p3 * 3 * wj * (wi * wi + 2 * wi * under)
-      );
+  if (!yc) {
+    for (j = 0; j < n; j++) {
+      wj = ws[j];
+      below = j > 0 ? cum[j - 1] : 0;
+      add(2 * ys[j], p3 * (3 * wj * wj * below + wj * wj * wj));
+
+      for (i = 0; i < j; i++) {
+        wi = ws[i];
+        under = i > 0 ? cum[i - 1] : 0;
+        add(ys[i] + ys[j], p3 * 3 * wj * (wi * wi + 2 * wi * under));
+      }
+    }
+    return { p: binP, v: binV };
+  }
+
+  // Three games with the bonus on the third, which is no longer exchangeable
+  // with the other two. Writing the top-two sum as M + max(m, v) — M and m the
+  // larger and smaller of the two plain draws, v the bonused one — keeps this to
+  // the same order of work as the closed form above.
+  var cOrder = new Array(n);
+  for (i = 0; i < n; i++) cOrder[i] = i;
+  cOrder.sort(function (a, b) { return yc[a] - yc[b]; });
+
+  var cVal = new Float64Array(n);
+  var cCum = new Float64Array(n);
+  acc = 0;
+  for (i = 0; i < n; i++) {
+    cVal[i] = yc[cOrder[i]];
+    acc += ws[cOrder[i]];
+    cCum[i] = acc;
+  }
+
+  // P(v <= x), and how many plain values fall strictly below x. The two have to
+  // split on the tie the same way or the masses do not add to one.
+  function massAtOrBelow(x) {
+    var a = 0, b = n;
+    while (a < b) { var mid = (a + b) >> 1; if (cVal[mid] <= x) a = mid + 1; else b = mid; }
+    return a > 0 ? cCum[a - 1] : 0;
+  }
+  function countBelow(x) {
+    var a = 0, b = n;
+    while (a < b) { var mid = (a + b) >> 1; if (ys[mid] < x) a = mid + 1; else b = mid; }
+    return a;
+  }
+
+  var gOf = new Float64Array(n);
+  for (i = 0; i < n; i++) gOf[i] = massAtOrBelow(ys[i]);
+  var kOf = new Int32Array(n);
+  for (i = 0; i < n; i++) kOf[i] = countBelow(yc[i]);
+
+  // v is no larger than the smaller plain draw, so the pair alone scores
+  for (j = 0; j < n; j++) {
+    wj = ws[j];
+    for (i = 0; i <= j; i++) {
+      var g = gOf[i];
+      if (g > 0) {
+        add(ys[i] + ys[j], p3 * (i === j ? wj * wj : 2 * ws[i] * wj) * g);
+      }
+    }
+  }
+
+  // v displaces the smaller draw, so it scores alongside the larger one
+  for (j = 0; j < n; j++) {
+    wj = ws[j];
+    for (var c = 0; c < n; c++) {
+      var k = kOf[c];
+      var t = Math.min(k, j) - 1;
+      var mass = 2 * wj * (t >= 0 ? cum[t] : 0) + (k > j ? wj * wj : 0);
+      if (mass > 0) add(ys[j] + yc[c], p3 * ws[c] * mass);
     }
   }
 
@@ -229,8 +339,9 @@ function computeAll(data, banner) {
     var base = baseScores(unit, banner[unit.role]);
     return pairs.map(function (pair) {
       var y = amplify(unit, base, pair.prefix, pair.suffix);
+      var boost = positionalBoost(unit, base, pair.suffix);
       return Array.from(
-        expectedMax(seriesHistogram(y, unit.w, data.meta.p3), nValues)
+        expectedMax(seriesHistogram(y, unit.w, data.meta.p3, boost), nValues)
       );
     });
   });
@@ -243,6 +354,7 @@ if (typeof module !== "undefined" && module.exports) {
     BINS: BINS,
     baseScores: baseScores,
     amplify: amplify,
+    positionalBoost: positionalBoost,
     seriesHistogram: seriesHistogram,
     expectedMax: expectedMax,
     pairList: pairList,

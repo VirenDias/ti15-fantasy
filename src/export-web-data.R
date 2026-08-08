@@ -71,7 +71,17 @@ export_web_data <- function(match_data,
                             period = current_period,
                             path = file.path(web_dir, "data.json")) {
   stat_cols <- stats$stat_column
-  indicator_cols <- c(prefixes$prefix_name, suffixes$suffix_name)
+
+  # A suffix that describes where a match sits in its series cannot travel with a
+  # resampled game, because resampling is what destroys the position. It is left
+  # out of the flags entirely and applied to whichever game the draw puts last --
+  # see methodology.md.
+  positional <- suffixes %>%
+    filter(suffix_scope != "match") %>%
+    pull(suffix_name)
+  indicator_cols <- setdiff(
+    c(prefixes$prefix_name, suffixes$suffix_name), positional
+  )
 
   # An indicator with nothing behind it drops out on the evidence rather than by
   # name, so it returns on its own once the parser starts supplying it
@@ -151,10 +161,13 @@ export_web_data <- function(match_data,
       prefixes %>% select(name = prefix_name, bonus = prefix_bonus),
       ~ list(name = ..1, bonus = ..2, bit = unname(bits[..1]))
     ),
+    # A positional suffix has no flag to carry, so it ships with a bit of zero
+    # and the browser applies it by where the game lands instead
     suffixes = pmap(
-      suffixes %>% filter(suffix_name %in% usable) %>%
-        select(name = suffix_name, bonus = suffix_bonus),
-      ~ list(name = ..1, bonus = ..2, bit = unname(bits[..1]))
+      suffixes %>% filter(suffix_name %in% c(usable, positional)) %>%
+        select(name = suffix_name, bonus = suffix_bonus, scope = suffix_scope),
+      ~ list(name = ..1, bonus = ..2, scope = ..3,
+             bit = if (..1 %in% names(bits)) unname(bits[..1]) else 0L)
     ),
     teams = pmap(
       teams %>% filter(team_id %in% map_dbl(units, "team")) %>%

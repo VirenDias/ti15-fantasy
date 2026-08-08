@@ -134,7 +134,8 @@ code { font-size: .85em; }
 .tab.active { color: var(--fg); border-bottom-color: var(--accent); }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-.tabbed > section > h2:first-child { margin-top: 1.5rem; }
+/* Whatever a panel opens with, it clears the tab row */
+.tabbed > section > :first-child { margin-top: 1.5rem; }
 
 @media (max-width: 30rem) {
   /* Four names this long cannot share a row without looking like an accident,
@@ -319,6 +320,39 @@ td.loss { color: var(--red); font-weight: 700; }
 /* A change that rounds to nothing is not a gain */
 td.zero { color: var(--dim); }
 td.changed { color: var(--fg); }
+
+/* Compiled data */
+/* Three small reference tables side by side, stacking when there is no room */
+.role-tables {
+  display: grid;
+  gap: 1rem;
+  /* Each role holds a different number of stats, so a card hugs its own rows
+     rather than stretching to match the tallest */
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+  margin-bottom: 1rem;
+}
+.role-table { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.role-table h3 {
+  margin: 0;
+  padding: .6rem .8rem;
+  font-size: .78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--dim);
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+/* An emblem stat a role cannot hold this period, kept in place so the three
+   tables stay the same length */
+.faded { opacity: .45; }
+
+td.colour { font-size: .78rem; }
+td.colour.Red { color: var(--red); }
+td.colour.Blue { color: var(--blue); }
+td.colour.Green { color: var(--green); }
 
 /* Rerolls */
 .table-wrap.short { max-height: 22rem; }

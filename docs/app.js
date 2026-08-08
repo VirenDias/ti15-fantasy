@@ -305,6 +305,224 @@ function renderRosterAdvice() {
   ]);
 }
 
+// --- compiled data ----------------------------------------------------------
+
+var COMPILED = null;                        // built once; no banner in it
+var STAT_SORT = { index: 0, desc: false };  // by team, then role
+var TITLE_SORT = { index: 0, desc: false };
+var ROLE_SORT = {                           // highest scoring emblem stat first
+  Core: { index: 2, desc: true },
+  Mid: { index: 2, desc: true },
+  Support: { index: 2, desc: true }
+};
+
+function teamName(id) {
+  var hit = DATA.teams.filter(function (t) { return t.id === id; })[0];
+  return hit ? hit.name : String(id);
+}
+
+// Only the colours this period's banner holds for that role can carry a stat
+function usable(role, index) {
+  return asArray(DATA.banner[role]).indexOf(DATA.stats[index].colour) >= 0;
+}
+
+function roleStats(role) {
+  var out = [];
+  DATA.stats.forEach(function (s, index) { if (usable(role, index)) out.push(index); });
+  return out;
+}
+
+function atMedian(unit, slots, prefix, suffix) {
+  var base = baseScores(unit, slots);
+  var y = amplify(unit, base, prefix, suffix);
+  var boost = positionalBoost(unit, base, suffix);
+  return expectedMax(seriesHistogram(y, unit.w, DATA.meta.p3, boost),
+                     [DATA.meta.n_median])[0];
+}
+
+// The same nested maxima the optimisers run, at the period's median number of
+// series. Nothing here depends on the banner you are building, so it is worked
+// out once — but it is a few thousand histograms, so not until the tab is opened.
+function compile() {
+  var titles = DATA.prefixes.map(function (t) { return { title: t, prefix: true }; })
+    .concat(DATA.suffixes.map(function (t) { return { title: t, prefix: false }; }));
+
+  var rows = DATA.units.map(function (unit) {
+    var points = DATA.stats.map(function (stat, index) {
+      return atMedian(unit, [{ stat: index, mult: 1 }], null, null);
+    });
+
+    // Every stat the role can hold, so what a title is worth does not depend on
+    // which three a banner happens to carry
+    var flat = roleStats(unit.role).map(function (index) {
+      return { stat: index, mult: 1 };
+    });
+    var plain = atMedian(unit, flat, null, null);
+    var lift = titles.map(function (entry) {
+      var value = atMedian(unit, flat,
+        entry.prefix ? entry.title : null,
+        entry.prefix ? null : entry.title);
+      return 100 * (value / plain - 1);
+    });
+
+    return { unit: unit, name: teamName(unit.team), points: points, lift: lift };
+  });
+
+  rows.sort(function (a, b) {
+    return a.name.localeCompare(b.name) ||
+      ROLES.indexOf(a.unit.role) - ROLES.indexOf(b.unit.role);
+  });
+
+  // The same figures with the team averaged out. Every stat is listed for every
+  // role, so the three tables are the same length; the ones a role cannot hold
+  // this period are marked rather than dropped.
+  var byRole = {};
+  ROLES.forEach(function (role) {
+    var of = rows.filter(function (row) { return row.unit.role === role; });
+    byRole[role] = DATA.stats.map(function (stat, index) {
+      var total = 0;
+      of.forEach(function (row) { total += row.points[index]; });
+      return { stat: index, value: total / of.length, usable: usable(role, index) };
+    });
+  });
+
+  return { rows: rows, titles: titles, byRole: byRole };
+}
+
+// A column carries its own sort key and its own cell, so every table on this tab
+// orders the same way and every column goes both directions
+function sortableTable(head, body, columns, rows, state, redraw) {
+  head.textContent = "";
+  columns.forEach(function (column, index) {
+    var on = index === state.index;
+    var th = el("th", (column.num ? "num " : "") + "sortable" + (on ? " sorted" : ""),
+      column.label + (on ? (state.desc ? " ↓" : " ↑") : ""));
+    th.tabIndex = 0;
+    th.setAttribute("role", "button");
+    var sort = function () {
+      // A second click on the same column reverses it; a new one starts with
+      // the order that column is usually read in
+      if (state.index === index) state.desc = !state.desc;
+      else { state.index = index; state.desc = !!column.num; }
+      redraw();
+    };
+    th.addEventListener("click", sort);
+    th.addEventListener("keydown", function (event) {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); sort(); }
+    });
+    head.appendChild(th);
+  });
+
+  var by = columns[state.index];
+  var sorted = rows.slice().sort(function (a, b) {
+    var x = by.value(a);
+    var y = by.value(b);
+    var d = typeof x === "string" ? x.localeCompare(y) : x - y;
+    return state.desc ? -d : d;
+  });
+
+  body.textContent = "";
+  sorted.forEach(function (row) {
+    var tr = el("tr", row.faded ? "faded" : null);
+    columns.forEach(function (column) {
+      tr.appendChild(el("td", column.cls ? column.cls(row) : (column.num ? "num" : null),
+        column.text(row)));
+    });
+    body.appendChild(tr);
+  });
+}
+
+var points = function (v) { return Math.round(v).toLocaleString(); };
+var percent = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1) + "%"; };
+
+function statColumns() {
+  var columns = [
+    { label: "Team", value: function (r) { return r.name; },
+      text: function (r) { return r.name; } },
+    { label: "Role", value: function (r) { return ROLES.indexOf(r.unit.role); },
+      text: function (r) { return r.unit.role; } }
+  ];
+  DATA.stats.forEach(function (stat, index) {
+    columns.push({
+      label: stat.label,
+      num: true,
+      value: function (r) { return r.points[index]; },
+      text: function (r) { return points(r.points[index]); },
+      cls: function (r) { return "num" + (usable(r.unit.role, index) ? "" : " faded"); }
+    });
+  });
+  return columns;
+}
+
+function titleColumns() {
+  var columns = [
+    { label: "Team", value: function (r) { return r.name; },
+      text: function (r) { return r.name; } },
+    { label: "Role", value: function (r) { return ROLES.indexOf(r.unit.role); },
+      text: function (r) { return r.unit.role; } }
+  ];
+  COMPILED.titles.forEach(function (entry, index) {
+    columns.push({
+      label: entry.title.name,
+      num: true,
+      value: function (r) { return r.lift[index]; },
+      text: function (r) { return percent(r.lift[index]); }
+    });
+  });
+  return columns;
+}
+
+// One table per role, all of them the same length
+function drawRoleTables() {
+  var host = document.getElementById("role-tables");
+  host.textContent = "";
+
+  var columns = [
+    { label: "Emblem stat", value: function (r) { return DATA.stats[r.stat].label; },
+      text: function (r) { return DATA.stats[r.stat].label; } },
+    { label: "Colour", value: function (r) { return DATA.stats[r.stat].colour; },
+      text: function (r) { return DATA.stats[r.stat].colour; },
+      cls: function (r) { return "colour " + DATA.stats[r.stat].colour; } },
+    { label: "Expected", num: true,
+      value: function (r) { return r.value; },
+      text: function (r) { return points(r.value); } }
+  ];
+
+  ROLES.forEach(function (role) {
+    var card = el("div", "role-table");
+    card.appendChild(el("h3", null, role));
+
+    var table = el("table");
+    var thead = el("thead");
+    var hr = el("tr");
+    thead.appendChild(hr);
+    var tbody = el("tbody");
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    card.appendChild(table);
+    host.appendChild(card);
+
+    var rows = COMPILED.byRole[role].map(function (entry) {
+      return { stat: entry.stat, value: entry.value, faded: !entry.usable };
+    });
+    sortableTable(hr, tbody, columns, rows, ROLE_SORT[role], function () {
+      drawRoleTables();
+    });
+  });
+}
+
+function renderCompiled() {
+  if (!COMPILED) COMPILED = compile();
+
+  sortableTable(document.getElementById("stat-head"), document.getElementById("stat-body"),
+    statColumns(), COMPILED.rows, STAT_SORT, renderCompiled);
+
+  drawRoleTables();
+
+  sortableTable(document.getElementById("title-head"), document.getElementById("title-body"),
+    titleColumns(), COMPILED.rows, TITLE_SORT, renderCompiled);
+}
+
 // --- rerolls ---------------------------------------------------------------
 
 // Grouped by colour then by what they change, in file order, which is the order
@@ -604,6 +822,8 @@ function buildTabs() {
         other.setAttribute("aria-selected", on ? "true" : "false");
         document.getElementById("panel-" + other.dataset.panel).hidden = !on;
       });
+      // A few thousand histograms, so not paid for unless the tab is opened
+      if (tab.dataset.panel === "data" && !COMPILED) renderCompiled();
     });
   });
   tabs[0].click();

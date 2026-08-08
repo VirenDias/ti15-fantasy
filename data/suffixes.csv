@@ -1,9 +1,9 @@
-suffix_name,suffix_desc,suffix_bonus
-the Clutch,+16% when playing the last possible match of a series,16
-the Cruel,+13% if a player is killed while in their own fountain,13
-the Decisive,+24% in games that last less than 25 minutes,24
-the Flayed Twins Acolyte,+9% if any player gets first blood before the starting horn,9
-the Lucky,+21% if the match time ends with an 8,21
-the Patient,+23% if first blood does not happen until after 10 minutes,23
-the Tormented,+23% if any player dies to a Tormentor,23
-the Underdog,+6% in games where the player loses,6
+suffix_name,suffix_desc,suffix_bonus,suffix_scope
+the Clutch,+16% when playing the last possible match of a series,16,series_position
+the Cruel,+13% if a player is killed while in their own fountain,13,match
+the Decisive,+24% in games that last less than 25 minutes,24,match
+the Flayed Twins Acolyte,+9% if any player gets first blood before the starting horn,9,match
+the Lucky,+21% if the match time ends with an 8,21,match
+the Patient,+23% if first blood does not happen until after 10 minutes,23,match
+the Tormented,+23% if any player dies to a Tormentor,23,match
+the Underdog,+6% in games where the player loses,6,match

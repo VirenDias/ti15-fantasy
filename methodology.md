@@ -243,9 +243,42 @@ A Bo3-only tournament produces `p3 / (2 + p3) = 0.414 / 2.414 = 17.1%`. Bo1 and
 Bo2 games are 27% of the pool but supply 59% of its clutch flags, because nearly
 every Bo1 game is trivially the last possible one.
 
-**Decision: the flag travels unrestricted**, giving 29.6%. The basis is that
-deciding games genuinely score more — measured over Bo3 games only, so format is
-held fixed:
+**Decision: the flag does not travel. It is applied to the last possible match of
+the simulated series.** In a Bo3 that is game 3, and only when the series runs to
+three — a 2-0 has no last possible match at all. The realised rate is then
+`p3 / (2 + p3) = 17.1%` by construction, matching the tournament rather than the
+pool, and no games are discarded to get there.
+
+Mechanics. `data/suffixes.csv` carries a `suffix_scope` column, so a positional
+suffix is identified from data rather than by name. `src/export-web-data.R`
+leaves it out of the indicator bitmask entirely and ships it with a bit of zero.
+`docs/calc.js` derives a per-game `positionalBoost` and `seriesHistogram` applies
+it to the third draw.
+
+The algebra that keeps this cheap: the top-two sum of `{A, B, v}` — two plain
+draws and the bonused one — is `M + max(m, v)`, where `M` and `m` are the larger
+and smaller of the plain pair. `(M, m)` is exactly the pair the enumeration
+already produces, so conditioning on whether `v` falls below `m` keeps the work at
+`O(n^2)`: 8,646 pair atoms plus 17,161 (pair-max, bonused) atoms at the largest
+unit, against 8,646 before. Only the eight prefix/suffix pairs that select the
+Clutch take this path; the rest short-circuit to the closed form.
+
+Measured effect, averaged across all 48 team-roles at the period's median run:
+
+| Model | `the Clutch` over no suffix |
+|---|---|
+| Flag travels with the game | +5.70% |
+| Applied to the last possible match | +3.59% |
+
+The overstatement was therefore **2.11 percentage points**, which supersedes the
+0.85pp estimated earlier from the rate gap alone. It is still the strongest
+suffix — `the Lucky` is next at +2.11% — but the choice is now contested: across
+the 4,096 rosters it wins 3,976, `the Lucky` 115 and `the Tormented` 5. The best
+roster's period-1 score falls from 23,119 to 22,548.
+
+**What the change costs.** The bonus now lands on a game drawn from the whole
+pool rather than on one that actually was a decider, and deciding games do score
+more — measured over Bo3 games only, so format is held fixed:
 
 | Role | Non-clutch mean | Clutch mean | Difference | p |
 |---|---|---|---|---|
@@ -253,15 +286,25 @@ held fixed:
 | Mid | 10,687 | 11,274 | +5.4% | 0.019 |
 | Support | 19,216 | 20,295 | +5.6% | 0.011 |
 
-Pooled and centred within team-role, p < 0.001. Two alternatives were measured
-and rejected: restricting the flag to Bo3 sources gives 11.9%, and restricting
-the whole pool to Bo3 games gives a correct 17.8% but costs 33% of the data and
-drops five units below 25 games.
+Pooled and centred within team-role, p < 0.001. That correlation is no longer
+modelled — worth about 0.15pp against the 2.11pp removed, so the trade is clearly
+positive, but it is a real loss and is recorded in section 10.
 
-Known cost of the decision: at 29.6% against a structural 17.1%, `the Clutch` is
-overstated by roughly **0.85 percentage points of roster score** — about six
-times the 0.15pp the decider premium is worth. Discount it when reading the
-suffix column.
+Three alternatives were measured and rejected. Letting the flag travel gives
+29.6%, the original decision, superseded here. Restricting the flag to Bo3
+sources gives 11.9%. Restricting the whole pool to Bo3 games gives a correct
+17.8% but costs 33% of the data and drops five units below 25 games. A fourth,
+scaling the positional draw by the measured decider premium, was rejected because
+the pool mean already contains decider games at their elevated scores, so the
+premium would be counted twice; correcting for that needs two further
+approximations to recover 0.15pp.
+
+**Verification.** The positional branch is checked against brute-force
+enumeration of every draw the model can make, agreeing to 1.4e-07 on synthetic
+units; against the closed form when the boost is zero, agreeing to 1.5e-16; and
+in the R/JS cross-check against an independent R implementation that takes the
+top two as `sum - min` rather than by the rearrangement above, agreeing to
+1.5e-06. Atom masses sum to 1 within 2.7e-15 across all 48 team-roles.
 
 ## 9. Decisions taken
 
@@ -274,7 +317,7 @@ suffix column.
 | Report E[P given N] rather than forecasting N | Separates an estimable quantity from a prediction, and leaves the judgement call with the user |
 | Period 1 quotes a single number at N=6, footnoting the 4-6 spread; period 2 exposes N | Section 6: 3-6% against 11-16% |
 | Pool is pairing only, no `same_team_in_match` | Header. The filter discards rebrands and whole-roster moves, which is where history transfers best |
-| `the Clutch` travels unrestricted | Section 8. Deciding games really do score ~5.6% more; the cost is a 29.6% rate against a structural 17.1% |
+| `the Clutch` is applied positionally, not carried | Section 8. Resampling destroys the position the flag describes, so carrying it imports the pool's format mix. Applying it to the third game of a simulated Bo3 reproduces the tournament's 17.1% by construction and discards no data. Costs the decider premium, 0.15pp against 2.11pp removed |
 | Indicators are dropped on `all(is.na(...))`, never by name | `the Cruel` returns on its own once `fantasy.jar` supplies it, with no code change |
 | Exact enumeration, not Monte Carlo | A series score is always `y_i + y_j`, so there are at most `n(n+1)/2` atoms with closed-form probabilities — 8,646 at the largest unit. Sampling would add error for nothing |
 | Amplification applied per player, before pairing | Section 1. 27 role-games in one Core unit alone have exactly one of the pair triggering a given prefix |
@@ -287,6 +330,10 @@ suffix column.
   sweep and a 1-1-into-game-3 may produce different kinds of games. Unmeasured.
 - **The 2-vs-3 rate is global**, so a team that consistently draws close series
   is not distinguished from one that sweeps.
+- **The last possible match is a random game.** Applying `the Clutch` positionally
+  puts the bonus on a game drawn from the whole pool, so the measured tendency of
+  deciders to score ~5.6% more is not modelled. Direction of the bias is down, by
+  roughly 0.15pp of role score. Section 8.
 - **`the Cruel` is unimplemented** — it needs a fountain-death counter in
   `fantasy.jar`. It stays a first-class `NA` rather than being silently dropped.
 - **16 Bo3s show only 1 game** in the data and the cause has not been

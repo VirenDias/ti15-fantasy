@@ -38,8 +38,8 @@
   <nav class="tabs">
     <button type="button" class="tab" data-panel="reroll">War Banner Optimiser</button>
     <button type="button" class="tab" data-panel="rosters">Roster &amp; Titles Optimiser</button>
-    <button type="button" class="tab" data-panel="methodology">Methodology</button>
     <button type="button" class="tab" data-panel="data">Compiled Data</button>
+    <button type="button" class="tab" data-panel="methodology">Methodology</button>
   </nav>
 
   <section id="panel-reroll">
@@ -76,7 +76,7 @@
 
     <div class="controls">
       <p class="note assume">
-        Expected points are for the median number of series played in the period.
+        Expected points are for the median number of series played across the entire period.
       </p>
       <label class="check">
         <input type="checkbox" id="show-n">
@@ -92,6 +92,52 @@
     </div>
   </section>
 
+  <section id="panel-data" hidden>
+    <p class="note">
+      This is for anyone who wants to see the numbers underneath. They are the
+      same calculation the optimisers run &mdash; the whole period, at the median
+      number of series, with no emblem multipliers. One thing does not carry
+      over: each emblem stat below is measured on its own, so the figures do not
+      add up to what a three-emblem banner scores. Each gets to pick its own best
+      games, while a real banner has to pick one set for all three.
+    </p>
+
+    <h2>Expected points per emblem stat, by team and role</h2>
+    <p class="note">
+      Total points each emblem stat is expected to score over the period, for a
+      given team and role, before any multiplier. Emblem stats this period's
+      banner cannot hold for that role are dimmed.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="stat-head"></tr></thead>
+        <tbody id="stat-body"></tbody>
+      </table>
+    </div>
+
+    <h2>Expected points per emblem stat, by role</h2>
+    <p class="note">
+      Total points each emblem stat is expected to score over the period for a
+      role, averaged across all teams, before any multiplier. Emblem stats
+      this period's banner cannot hold are dimmed.
+    </p>
+    <div id="role-tables" class="role-tables"></div>
+
+    <h2>Expected multiplier per title, by team and role</h2>
+    <p class="note">
+      What each title is expected to add over the period, for a given team and
+      role, as a percentage of the same banner without it. Judged on every emblem
+      stat the role can hold, so it does not depend on which three a banner
+      happens to carry.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="title-head"></tr></thead>
+        <tbody id="title-body"></tbody>
+      </table>
+    </div>
+  </section>
+
   <section id="panel-methodology" hidden>
     <h2>Data</h2>
     <ul>
@@ -103,6 +149,10 @@
       <li>Matches are exponentially weighted, so recent ones count for more.</li>
       <li>Coverage is uneven, between <span id="m-min"></span> and
         <span id="m-max"></span> matches for a given team and role.</li>
+      <li>Much of the data is Bo1 and Bo2, where nearly every game is trivially
+        the last possible match of its series. That makes the recorded trigger
+        for <strong>the Clutch</strong> far more common than it will be at the
+        tournament, so it cannot be read from the data at all.</li>
       <li id="m-missing">The data needed for
         <strong><span id="m-dropped"></span></strong> is not available yet. We are
         working on acquiring it.</li>
@@ -140,6 +190,12 @@
         either maximum is taken, because which matches they fall in determines
         their value. They can be changed freely, so roll evaluation excludes
         them.</li>
+      <li>The Clutch is the exception. It pays out in the last possible match of
+        a series, which is a position rather than a property of the match, so it
+        is applied to the third game of a series that runs to three and to
+        nothing at all in a series that ends 2-0. That game is drawn like any
+        other, and deciding games tend to score a little above average, so its
+        worth is slightly understated.</li>
       <li>Since the team is chosen later, a banner is valued as the mean of what
         it is worth to each of the 16 teams in that role. Valuing it against only
         the strongest team was tested and made very little difference to which
@@ -159,10 +215,6 @@
     </ul>
   </section>
 
-  <section id="panel-data" hidden>
-    <h2>Compiled Data</h2>
-    <p class="note">Not published yet.</p>
-  </section>
   </div>
 </main>
 
