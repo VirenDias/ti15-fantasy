@@ -107,6 +107,43 @@ main li { margin-bottom: .4rem; }
 main li strong { color: var(--fg); font-weight: 600; }
 code { font-size: .85em; }
 
+/* Closed by default, so a newcomer opens it once and everyone else scrolls past
+   a single line. Native <details>, so the state and the keyboard both come free.
+   */
+.guide {
+  margin-top: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.guide > summary {
+  padding: .7rem 1rem;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+}
+.guide > summary:hover { color: var(--accent); }
+.guide > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.guide[open] > summary { border-bottom: 1px solid var(--line); }
+
+.guide ol {
+  margin: 0;
+  padding: 1rem 1.25rem 1.25rem 2.4rem;
+  font-size: .9rem;
+  color: var(--dim);
+}
+.guide li { margin-bottom: .9rem; }
+.guide li:last-child { margin-bottom: 0; }
+/* The same left rule the advice boxes use, so a note reads as subordinate
+   without introducing another treatment */
+.guide .aside {
+  margin: .4rem 0 0;
+  padding-left: .7rem;
+  border-left: 2px solid var(--line);
+  font-size: .85rem;
+}
+
 /* A rule spanning the full width, with the selected tab lit on it, says the
    panel below belongs to that tab without boxing it in */
 .tabbed { margin-top: 2rem; }
