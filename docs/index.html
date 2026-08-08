@@ -46,7 +46,7 @@
     <h2>Set your roll options</h2>
     <div id="options" class="offers"></div>
 
-    <h2>Pick an operation</h2>
+    <h2>Pick a reroll operation</h2>
 
     <div id="advice" class="advice">
       <span class="advice-label">Recommendation</span>
@@ -65,7 +65,7 @@
   </section>
 
   <section id="panel-rosters" hidden>
-    <h2>Pick a roster and titles</h2>
+    <h2>Pick a roster-title combination</h2>
 
     <div id="roster-advice" class="advice">
       <span class="advice-label">Recommendation</span>
@@ -186,6 +186,11 @@
         probability. A series runs two or three games in the proportion observed
         in the data, where <span id="m-p3"></span> of Bo3s go to three. Nothing
         is simulated.</li>
+      <li>Those games are drawn to match how a Bo3 actually plays out. Two games
+        means one side swept, so both are wins or both are losses; three games
+        means the first two were split, which is what took it to a third, and the
+        decider goes to whoever takes the series. Drawing freely would invent
+        3-0 series and split two-game ones, neither of which can happen.</li>
       <li>Prefixes and suffixes are applied to each player in each match, before
         either maximum is taken, because which matches they fall in determines
         their value. They can be changed freely, so roll evaluation excludes

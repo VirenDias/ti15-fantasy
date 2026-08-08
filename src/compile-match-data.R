@@ -220,6 +220,8 @@ compile_match_data <- function(
         team_side_id,
         same_team_in_match,
         is_radiant,
+        # A Bo3's win/loss pattern is fixed, so the resampled series needs it
+        lose,
         hero_id,
         hero_name,
         all_of(stat_cols),

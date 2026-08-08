@@ -336,7 +336,7 @@ function atMedian(unit, slots, prefix, suffix) {
   var base = baseScores(unit, slots);
   var y = amplify(unit, base, prefix, suffix);
   var boost = positionalBoost(unit, base, suffix);
-  return expectedMax(seriesHistogram(y, unit.w, DATA.meta.p3, boost),
+  return expectedMax(seriesHistogram(y, unit.w, DATA.meta.p3, boost, unit.win),
                      [DATA.meta.n_median])[0];
 }
 

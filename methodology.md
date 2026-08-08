@@ -288,7 +288,7 @@ more — measured over Bo3 games only, so format is held fixed:
 
 Pooled and centred within team-role, p < 0.001. That correlation is no longer
 modelled — worth about 0.15pp against the 2.11pp removed, so the trade is clearly
-positive, but it is a real loss and is recorded in section 10.
+positive, but it is a real loss and is recorded in section 11.
 
 Three alternatives were measured and rejected. Letting the flag travel gives
 29.6%, the original decision, superseded here. Restricting the flag to Bo3
@@ -306,7 +306,68 @@ in the R/JS cross-check against an independent R implementation that takes the
 top two as `sum - min` rather than by the rearrangement above, agreeing to
 1.5e-06. Atom masses sum to 1 within 2.7e-15 across all 48 team-roles.
 
-## 9. Decisions taken
+## 9. Series composition
+
+A Bo3's win/loss pattern is not free. Two games means a **2-0 or a 0-2**; three
+games means the first two were **split one apiece** — that is what took it to a
+third — plus a decider. Drawing three games freely from the pool produces 3-0 and
+0-3 series that cannot occur, and two-game series with one win and one loss,
+which also cannot occur.
+
+**Decision: the draw is conditioned on the result.** A two-game series takes both
+games from one pool. A three-game series takes one from each, plus a decider
+drawn over the whole pool. `the Clutch` rides on that decider.
+
+Two quantities follow from the recency-weighted game win rate `r`, using the
+independence already established in section 5:
+
+| Quantity | Value | Reason |
+|---|---|---|
+| P(the sweep is ours \| two games) | `r² / (r² + (1-r)²)` | Bayes on two independent games, conditioned on them agreeing |
+| P(we take the decider \| three games) | `r` | It is one game |
+| P(the decider is a given game) | its plain weight | The win pool holds exactly `r` of the weight, so choosing the pool and drawing within it cancel |
+
+That last line is why the decider needs no special handling: `t = r` makes it an
+ordinary weighted draw over every game.
+
+Self-consistency check. Implied marginal win rate is
+`[(1-p3)·2s + p3·(1+r)] / (2 + p3)`, which at `r = 0.7, p3 = 0.414` gives 0.702
+against the 0.700 it was built from.
+
+**The direction of the correction is not what it looks like.** The obvious
+argument — free draws over-produce homogeneous series, more spread, higher
+`E[max]` — is wrong, because `s ≥ r²` always. Conditioning on a two-game series
+is *informative*: a sweep more likely belongs to the stronger side. At `r = 0.7`
+that is an 84% chance both games are wins against 49% under free draws, which
+lifts the ceiling more than losing the impossible 3-0 lowers it.
+
+Measured across all 48 team-roles at the period's median run:
+
+| | Change in E[max] |
+|---|---|
+| All units | **+0.86%** mean, 4 of 48 fall |
+| Win rate above 60% (19 units) | +0.32% |
+| Win rate below 50% (14 units) | +1.30% |
+| Range | -0.70% at `r` = 0.76 to +3.05% at `r` = 0.42 |
+
+So the unconditioned model was *understating* most team-roles, and understating
+the weaker ones most. It re-ranks: the best period-1 roster's Core changes from
+TEAM VISION to Aurora Gaming.
+
+Cost: `computeAll` goes from about 450 ms to 680 ms, since the three-game
+enumeration is now `|wins|·|losses|` pairs plus `n²` pair-and-decider atoms
+rather than one closed form. A team-role with nothing in either pool falls back
+to the unconditioned draw; none currently do, with win rates spanning 0.418 to
+0.778.
+
+**Verification.** Brute-force enumeration of the model straight from its
+description agrees to 1.5e-15 without `the Clutch` and 1.0e-06 with it; mass sums
+to 1 within 2.4e-15 across all 48 team-roles; Monte Carlo of the full series
+model agrees to 0.06%; and the R/JS cross-check, with the R side taking the top
+two as `sum - min` rather than by the rearrangement `calc.js` uses, agrees to
+1.5e-06.
+
+## 10. Decisions taken
 
 | Decision | Basis |
 |---|---|
@@ -321,15 +382,20 @@ top two as `sum - min` rather than by the rearrangement above, agreeing to
 | Indicators are dropped on `all(is.na(...))`, never by name | `the Cruel` returns on its own once `fantasy.jar` supplies it, with no code change |
 | Exact enumeration, not Monte Carlo | A series score is always `y_i + y_j`, so there are at most `n(n+1)/2` atoms with closed-form probabilities — 8,646 at the largest unit. Sampling would add error for nothing |
 | Amplification applied per player, before pairing | Section 1. 27 role-games in one Core unit alone have exactly one of the pair triggering a given prefix |
+| The series draw is conditioned on the result | Section 9. A Bo3 is 2-0, 0-2, 2-1 or 1-2, so free draws produce series that cannot happen. Worth +0.86% mean, and it re-ranks teams |
 
-## 10. Open assumptions
+## 11. Open assumptions
 
 - **Series are drawn independently**, so form persistence *across* series is not
   modelled. Direction of the bias is up. Unmeasured.
-- **Per-game distributions do not depend on how long the series ran.** A 2-0
-  sweep and a 1-1-into-game-3 may produce different kinds of games. Unmeasured.
+- **Within a pool, the game a series draws does not depend on the series.** The
+  win/loss *composition* is now conditioned on length and result (section 9), but
+  a win drawn into a 2-0 comes from the same distribution as a win drawn into a
+  2-1, and they may not be alike. Unmeasured.
 - **The 2-vs-3 rate is global**, so a team that consistently draws close series
-  is not distinguished from one that sweeps.
+  is not distinguished from one that sweeps. The sweep and decider odds are
+  derived from the team's own win rate rather than from its observed series
+  record, which would be far more thinly evidenced.
 - **The last possible match is a random game.** Applying `the Clutch` positionally
   puts the bonus on a game drawn from the whole pool, so the measured tendency of
   deciders to score ~5.6% more is not modelled. Direction of the bias is down, by
@@ -352,7 +418,7 @@ top two as `sum - min` rather than by the rearrangement above, agreeing to
   reroll cannot return the current tier, so the remaining four renormalise. The
   live banner cannot validate this, since its emblems have already been rerolled.
 
-## 11. The reroll model
+## 12. The reroll model
 
 Twenty roll operations, in `data/rolls.csv`. Each colour has one granular category
 with all / first / last / random variants and all-only for the other two — Red is
@@ -426,7 +492,7 @@ banner exactly, totals and trait percentages alike — 230/100/210, 130/110/160,
 140/240/130. That is the only check against something other than our own
 arithmetic, and it is a hard assertion in the test suite.
 
-## 12. Data quality
+## 13. Data quality
 
 `fantasy.jar` validated against OpenDota over 400 player-matches on patch 7.41:
 

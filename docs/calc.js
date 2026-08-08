@@ -83,6 +83,132 @@ function amplify(unit, base, prefix, suffix) {
   return y;
 }
 
+// Mass at or below x, and mass strictly below x, over an ascending list with its
+// running totals. The two have to split a tie the same way or the pieces of the
+// enumeration below do not add to one.
+function massAtOrBelow(values, cums, x) {
+  var a = 0;
+  var b = values.length;
+  while (a < b) { var m = (a + b) >> 1; if (values[m] <= x) a = m + 1; else b = m; }
+  return a > 0 ? cums[a - 1] : 0;
+}
+
+function massBelow(values, cums, x) {
+  var a = 0;
+  var b = values.length;
+  while (a < b) { var m = (a + b) >> 1; if (values[m] < x) a = m + 1; else b = m; }
+  return a > 0 ? cums[a - 1] : 0;
+}
+
+function running(probs) {
+  var out = new Float64Array(probs.length);
+  var acc = 0;
+  for (var i = 0; i < probs.length; i++) { acc += probs[i]; out[i] = acc; }
+  return out;
+}
+
+// Wins and losses as two ascending pools, each with its own normalised weights.
+// Null when either is empty, since the composition below needs both.
+function splitByResult(ys, ws, order, win) {
+  var wv = [], wp = [], lv = [], lp = [], share = 0;
+  for (var i = 0; i < ys.length; i++) {
+    if (win[order[i]]) { wv.push(ys[i]); wp.push(ws[i]); share += ws[i]; }
+    else { lv.push(ys[i]); lp.push(ws[i]); }
+  }
+  if (wv.length === 0 || lv.length === 0) return null;
+
+  for (i = 0; i < wp.length; i++) wp[i] /= share;
+  for (i = 0; i < lp.length; i++) lp[i] /= 1 - share;
+
+  return {
+    order: order,
+    win: win,
+    share: share,
+    wv: Float64Array.from(wv), wp: Float64Array.from(wp), wc: running(wp),
+    lv: Float64Array.from(lv), lp: Float64Array.from(lp), lc: running(lp)
+  };
+}
+
+// A series conditioned on its result. Games within a series are taken as
+// independent (methodology.md section 5), so the chance of sweeping a two-game
+// series follows from the recency-weighted game win rate r as r^2/(r^2+(1-r)^2),
+// and the decider is a single game, won with probability r.
+function conditioned(pools, ys, yc, ws, p3, add) {
+  var r = pools.share;
+  var sweepOdds = r * r / (r * r + (1 - r) * (1 - r));
+  var p2 = 1 - p3;
+  var a, b, d;
+
+  // Two games: a 2-0 or a 0-2, so both come from the same pool
+  function sweep(values, probs, weight) {
+    for (var x = 0; x < values.length; x++) {
+      add(2 * values[x], weight * probs[x] * probs[x]);
+      for (var z = 0; z < x; z++) {
+        add(values[x] + values[z], weight * 2 * probs[x] * probs[z]);
+      }
+    }
+  }
+  sweep(pools.wv, pools.wp, p2 * sweepOdds);
+  sweep(pools.lv, pools.lp, p2 * (1 - sweepOdds));
+
+  // The decider carries the positional bonus, and goes to the side that takes
+  // the series — probability r. The win pool holds exactly r of the weight, so
+  // choosing the pool and then drawing within it cancel out, and the decider
+  // comes out a plain weighted draw over every game.
+  var dv = [], dp = [];
+  for (var i = 0; i < ys.length; i++) {
+    dv.push(yc ? yc[i] : ys[i]);
+    dp.push(ws[i]);
+  }
+  var di = dv.map(function (_, k) { return k; })
+    .sort(function (x, z) { return dv[x] - dv[z]; });
+  var DV = Float64Array.from(di, function (k) { return dv[k]; });
+  var DP = Float64Array.from(di, function (k) { return dp[k]; });
+  var DC = running(DP);
+
+  // Top two of the three is M + max(m, v), with M and m the larger and smaller
+  // of the split pair and v the decider.
+  //
+  // (a) the decider is no larger than the smaller of the pair, so the pair alone
+  //     scores
+  for (a = 0; a < pools.wv.length; a++) {
+    for (b = 0; b < pools.lv.length; b++) {
+      var smaller = pools.wv[a] < pools.lv[b] ? pools.wv[a] : pools.lv[b];
+      var g = massAtOrBelow(DV, DC, smaller);
+      if (g > 0) add(pools.wv[a] + pools.lv[b], p3 * pools.wp[a] * pools.lp[b] * g);
+    }
+  }
+
+  // (b) the decider displaces the smaller, so it scores with the larger. Split
+  //     by which side of the pair is larger, so each mass is a prefix sum.
+  var lossBelowWin = Float64Array.from(pools.wv, function (v) {
+    return massBelow(pools.lv, pools.lc, v);
+  });
+  var lossBelowDecider = Float64Array.from(DV, function (v) {
+    return massBelow(pools.lv, pools.lc, v);
+  });
+  for (a = 0; a < pools.wv.length; a++) {
+    for (d = 0; d < DV.length; d++) {
+      // both bounds are strict, and the mass is monotone, so the tighter wins
+      var mass = lossBelowWin[a] < lossBelowDecider[d] ? lossBelowWin[a] : lossBelowDecider[d];
+      if (mass > 0) add(pools.wv[a] + DV[d], p3 * DP[d] * pools.wp[a] * mass);
+    }
+  }
+
+  var winBelowDecider = Float64Array.from(DV, function (v) {
+    return massBelow(pools.wv, pools.wc, v);
+  });
+  var winAtOrBelowLoss = Float64Array.from(pools.lv, function (v) {
+    return massAtOrBelow(pools.wv, pools.wc, v);
+  });
+  for (b = 0; b < pools.lv.length; b++) {
+    for (d = 0; d < DV.length; d++) {
+      var m2 = DV[d] <= pools.lv[b] ? winBelowDecider[d] : winAtOrBelowLoss[b];
+      if (m2 > 0) add(pools.lv[b] + DV[d], p3 * DP[d] * pools.lp[b] * m2);
+    }
+  }
+}
+
 // The exact distribution of a series score, as a histogram over y[i] + y[j].
 //
 // Games are drawn independently with replacement, weighted by recency. Sorting
@@ -98,7 +224,13 @@ function amplify(unit, base, prefix, suffix) {
 // possible match and a two-game one does not, so the bonus lands on the third
 // draw only — which reproduces the tournament's rate, p3 / (2 + p3), by
 // construction rather than by filtering the pool.
-function seriesHistogram(y, w, p3, boost) {
+//
+// `win` conditions the draw on the result. A Bo3's win/loss pattern is not free:
+// two games means a 2-0 or a 0-2, and three games means the first two were split
+// one apiece — that is what took it to a third — plus a decider that goes to
+// whoever takes the series. Drawing from the pool as a whole would produce 3-0
+// and 0-3 series that cannot happen, and the extra spread flatters E[max].
+function seriesHistogram(y, w, p3, boost, win) {
   var n = y.length;
   var order = new Array(n);
   for (var i = 0; i < n; i++) order[i] = i;
@@ -145,6 +277,14 @@ function seriesHistogram(y, w, p3, boost) {
     if (b >= BINS) b = BINS - 1;
     binP[b] += prob;
     binV[b] += prob * value;
+  }
+
+  // Split the sorted games by result. A team with nothing in one pool cannot be
+  // modelled this way, so it falls back to drawing from the pool as a whole.
+  var pools = win ? splitByResult(ys, ws, order, win) : null;
+  if (pools) {
+    conditioned(pools, ys, yc, ws, p3, add);
+    return { p: binP, v: binV };
   }
 
   // Two games: both count, and neither is the last possible match of the series
@@ -315,7 +455,8 @@ function bannerValue(units, slots, data) {
   for (var u = 0; u < units.length; u++) {
     var base = baseScores(units[u], resolved);
     var y = amplify(units[u], base, null, null);
-    total += expectedMax(seriesHistogram(y, units[u].w, data.meta.p3), n)[0];
+    total += expectedMax(
+      seriesHistogram(y, units[u].w, data.meta.p3, null, units[u].win), n)[0];
   }
   return total / units.length;
 }
@@ -341,7 +482,7 @@ function computeAll(data, banner) {
       var y = amplify(unit, base, pair.prefix, pair.suffix);
       var boost = positionalBoost(unit, base, pair.suffix);
       return Array.from(
-        expectedMax(seriesHistogram(y, unit.w, data.meta.p3, boost), nValues)
+        expectedMax(seriesHistogram(y, unit.w, data.meta.p3, boost, unit.win), nValues)
       );
     });
   });
@@ -356,6 +497,7 @@ if (typeof module !== "undefined" && module.exports) {
     amplify: amplify,
     positionalBoost: positionalBoost,
     seriesHistogram: seriesHistogram,
+    splitByResult: splitByResult,
     expectedMax: expectedMax,
     pairList: pairList,
     computeAll: computeAll,

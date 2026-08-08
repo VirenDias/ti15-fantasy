@@ -99,22 +99,29 @@ export_web_data <- function(match_data,
   # mix with it -- see methodology.md.
   role_games <- build_role_games(match_data, stat_cols, usable)
 
-  # One weight per role-game, shared by the players in it
-  weights <- role_games %>%
-    distinct(team_id, player_role, match_id, is_radiant, start_time) %>%
+  # One weight per role-game, shared by the players in it. The match result is
+  # shared too, and a Bo3's win/loss pattern is fixed, so it travels with them.
+  games <- role_games %>%
+    distinct(team_id, player_role, match_id, is_radiant, start_time, lose) %>%
     mutate(
       weight = calc_exp_weights(start_time, weight_alpha),
       .by = c(team_id, player_role)
     )
 
+  stopifnot(
+    # A role's players share the match, so the result cannot differ between them
+    nrow(games) == nrow(distinct(
+      role_games, team_id, player_role, match_id, is_radiant
+    ))
+  )
+
   bits <- set_names(2^(seq_along(usable) - 1), usable)
   units <- role_games %>%
     nest(.by = c(team_id, player_role)) %>%
     pmap(function(team_id, player_role, data) {
-      w <- weights %>%
+      rows <- games %>%
         filter(team_id == !!team_id, player_role == !!player_role) %>%
-        arrange(start_time, match_id) %>%
-        pull(weight)
+        arrange(start_time, match_id)
 
       list(
         team = team_id,
@@ -122,7 +129,8 @@ export_web_data <- function(match_data,
         size = unname(role_size[player_role]),
         pts = round(as.matrix(data[stat_cols])),
         ind = as.vector(as.matrix(data[usable]) %*% bits),
-        w = w
+        w = rows$weight,
+        win = as.integer(rows$lose == 0)
       )
     })
 
