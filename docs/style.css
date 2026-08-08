@@ -291,6 +291,9 @@ th, td { padding: .4rem .6rem; text-align: left; white-space: nowrap; }
 thead th {
   position: sticky;
   top: 0;
+  /* A faded cell has an opacity, which makes it its own stacking context and
+     lets it paint over a sticky header that has no z-index of its own */
+  z-index: 1;
   background: var(--panel);
   border-bottom: 1px solid var(--line);
   font-weight: 600;
@@ -349,10 +352,7 @@ td.changed { color: var(--fg); }
    tables stay the same length */
 .faded { opacity: .45; }
 
-td.colour { font-size: .78rem; }
-td.colour.Red { color: var(--red); }
-td.colour.Blue { color: var(--blue); }
-td.colour.Green { color: var(--green); }
+td.colour { font-size: .78rem; color: var(--dim); }
 
 /* Rerolls */
 .table-wrap.short { max-height: 22rem; }

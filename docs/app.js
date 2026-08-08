@@ -480,9 +480,9 @@ function drawRoleTables() {
   var columns = [
     { label: "Emblem stat", value: function (r) { return DATA.stats[r.stat].label; },
       text: function (r) { return DATA.stats[r.stat].label; } },
-    { label: "Colour", value: function (r) { return DATA.stats[r.stat].colour; },
+    { label: "Emblem colour", value: function (r) { return DATA.stats[r.stat].colour; },
       text: function (r) { return DATA.stats[r.stat].colour; },
-      cls: function (r) { return "colour " + DATA.stats[r.stat].colour; } },
+      cls: function () { return "colour"; } },
     { label: "Expected", num: true,
       value: function (r) { return r.value; },
       text: function (r) { return points(r.value); } }
@@ -822,6 +822,9 @@ function buildTabs() {
         other.setAttribute("aria-selected", on ? "true" : "false");
         document.getElementById("panel-" + other.dataset.panel).hidden = !on;
       });
+      // The banner is an input to the two optimisers and to nothing else, so it
+      // goes away rather than implying the other tabs respond to it
+      document.getElementById("banner-section").hidden = !("banner" in tab.dataset);
       // A few thousand histograms, so not paid for unless the tab is opened
       if (tab.dataset.panel === "data" && !COMPILED) renderCompiled();
     });

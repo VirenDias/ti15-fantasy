@@ -29,21 +29,22 @@
 </header>
 
 <main>
+  <div class="tabbed">
+  <nav class="tabs">
+    <button type="button" class="tab" data-panel="reroll" data-banner>War Banner Optimiser</button>
+    <button type="button" class="tab" data-panel="rosters" data-banner>Roster &amp; Titles Optimiser</button>
+    <button type="button" class="tab" data-panel="data">Compiled Data</button>
+    <button type="button" class="tab" data-panel="methodology">Methodology</button>
+  </nav>
+
+  <!-- Shared by the two optimisers, and hidden for the tabs it has no bearing on -->
   <section id="banner-section">
     <h2>Set your War Banners</h2>
     <div id="banner" class="roles"></div>
   </section>
 
-  <div class="tabbed">
-  <nav class="tabs">
-    <button type="button" class="tab" data-panel="reroll">War Banner Optimiser</button>
-    <button type="button" class="tab" data-panel="rosters">Roster &amp; Titles Optimiser</button>
-    <button type="button" class="tab" data-panel="data">Compiled Data</button>
-    <button type="button" class="tab" data-panel="methodology">Methodology</button>
-  </nav>
-
   <section id="panel-reroll">
-    <h2>Set your roll options</h2>
+    <h2>Set your roll operations</h2>
     <div id="options" class="offers"></div>
 
     <h2>Pick a reroll operation</h2>
