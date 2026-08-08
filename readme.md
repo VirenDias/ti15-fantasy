@@ -91,9 +91,6 @@ open it:
 python -m http.server 8000 --directory docs
 ```
 
-`file://` does not work, because the browser blocks `fetch` on it. To publish,
-commit `docs/` and enable GitHub Pages with source `main` and folder `/docs`.
-
 Set each banner slot to the emblem you rolled — its stat, quality and trait. The
 multiplier is derived, including what neighbouring emblems do to it, and shown so
 it can be checked against the game. Everything recalculates in the page from
